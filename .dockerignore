@@ -1,0 +1,15 @@
+node_modules
+.npm-cache
+.env
+.env.*
+!.env.example
+.git
+data
+uploads
+backups
+dist
+output
+.playwright-cli
+previews
+demo-*.html
+*.log

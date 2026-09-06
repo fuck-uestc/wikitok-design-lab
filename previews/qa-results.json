@@ -1,0 +1,124 @@
+{
+  "functional": [
+    {
+      "prototype": "a-margin",
+      "checks": [
+        "initial state: six entries",
+        "J/K and arrow navigation",
+        "native wheel scroll and home",
+        "save / unsave / collection tabs (in-session fallback)",
+        "search and jump to result",
+        "reader, source links and return position",
+        "category filter and reset",
+        "random next",
+        "no-image fallback entry",
+        "share fallback exposes HTTPS article URL",
+        "full-image lightbox",
+        "resize preserves entry; mobile collection access",
+        "simulated image error fallback"
+      ],
+      "javascript_errors": [],
+      "external_requests": []
+    },
+    {
+      "prototype": "b-drift",
+      "checks": [
+        "initial state: six entries",
+        "J/K and arrow navigation",
+        "native wheel scroll and home",
+        "save / unsave / collection tabs (in-session fallback)",
+        "search and jump to result",
+        "reader, source links and return position",
+        "category filter and reset",
+        "random next",
+        "no-image fallback entry",
+        "share fallback exposes HTTPS article URL",
+        "focus view and escape",
+        "resize preserves entry; mobile collection access",
+        "simulated image error fallback"
+      ],
+      "javascript_errors": [],
+      "external_requests": []
+    }
+  ],
+  "layouts": [
+    {
+      "prototype": "a-margin",
+      "viewport": "1440x900",
+      "entries_checked": 6,
+      "page_overflow": false
+    },
+    {
+      "prototype": "a-margin",
+      "viewport": "1280x720",
+      "entries_checked": 6,
+      "page_overflow": false
+    },
+    {
+      "prototype": "a-margin",
+      "viewport": "768x1024",
+      "entries_checked": 6,
+      "page_overflow": false
+    },
+    {
+      "prototype": "a-margin",
+      "viewport": "390x844",
+      "entries_checked": 6,
+      "page_overflow": false
+    },
+    {
+      "prototype": "a-margin",
+      "viewport": "360x640",
+      "entries_checked": 6,
+      "page_overflow": false
+    },
+    {
+      "prototype": "a-margin",
+      "viewport": "320x568",
+      "entries_checked": 6,
+      "page_overflow": false
+    },
+    {
+      "prototype": "b-drift",
+      "viewport": "1440x900",
+      "entries_checked": 6,
+      "page_overflow": false
+    },
+    {
+      "prototype": "b-drift",
+      "viewport": "1280x720",
+      "entries_checked": 6,
+      "page_overflow": false
+    },
+    {
+      "prototype": "b-drift",
+      "viewport": "768x1024",
+      "entries_checked": 6,
+      "page_overflow": false
+    },
+    {
+      "prototype": "b-drift",
+      "viewport": "390x844",
+      "entries_checked": 6,
+      "page_overflow": false
+    },
+    {
+      "prototype": "b-drift",
+      "viewport": "360x640",
+      "entries_checked": 6,
+      "page_overflow": false
+    },
+    {
+      "prototype": "b-drift",
+      "viewport": "320x568",
+      "entries_checked": 6,
+      "page_overflow": false
+    }
+  ],
+  "notes": [
+    "Inline rendering of fully bundled HTML in headless Chromium.",
+    "Real localStorage persistence, OS share UI, real mobile browsers and backend requests were not tested.",
+    "Bookmarks were tested using the implemented in-memory fallback when storage was unavailable.",
+    "No external HTTP resources were requested by the prototypes during the test."
+  ]
+}

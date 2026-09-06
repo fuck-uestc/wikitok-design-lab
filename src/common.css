@@ -1,0 +1,124 @@
+
+:root {
+  --sans: "Inter", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --ink: #22251e; --muted: #777b6f; --paper: #f6f5ef; --line: #ddded2;
+  --accent: #d6e681; --radius: 4px;
+}
+*, *::before, *::after { box-sizing:border-box }
+html,body { margin:0; width:100%; height:100%; overflow:hidden }
+body { font-family:var(--sans); -webkit-font-smoothing:antialiased; color:var(--ink); background:var(--paper) }
+button,input,a { -webkit-tap-highlight-color:transparent }
+button,input { font:inherit }
+button { color:inherit; cursor:pointer; border:0; background:none; padding:0 }
+button:disabled { opacity:.3; cursor:default }
+a { color:inherit; text-decoration:none }
+button,a,input { outline-offset:5px }
+button:focus-visible,a:focus-visible { outline:2px solid currentColor }
+input:focus-visible { outline:2px solid #8d9c49; outline-offset:0 }
+button,a { touch-action:manipulation }
+button { min-height:44px }
+svg.ico { width:20px; height:20px; flex:none; vertical-align:middle; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round }
+.ico-lg svg.ico { width:25px; height:25px }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0 }
+.skip-link { position:fixed; z-index:120; top:-60px; left:10px; background:var(--ink); color:var(--paper); padding:12px 20px }
+.skip-link:focus { top:10px }
+.mono { font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase }
+.icon-btn { display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; border:1px solid var(--line); border-radius:50%; transition:background .18s,transform .18s; flex:none }
+.icon-btn:hover { background:#e7eadb; transform:translateY(-2px) }
+.icon-btn.is-saved { background:var(--ink); color:var(--accent); border-color:var(--ink) }
+.is-saved .ico { fill:currentColor; stroke-width:1.3 }
+.pill-button { min-height:49px; display:inline-flex; align-items:center; justify-content:center; gap:25px; border-radius:100px; padding:0 23px; font-size:13px; font-weight:500; background:var(--ink); color:var(--paper); white-space:nowrap; transition:transform .2s,background .2s }
+.pill-button:hover { transform:translateY(-2px); background:#3b4530 }
+.text-button { display:inline-flex; align-items:center; gap:9px; font-size:12px; min-height:44px }
+.saved-count { font-family:var(--mono); font-size:10px; opacity:.6; margin-left:6px }
+.feed { overflow-y:auto; overflow-x:hidden; scroll-snap-type:y mandatory; scroll-behavior:smooth; scrollbar-width:none; overscroll-behavior-y:contain; min-height:0; position:relative }
+.feed::-webkit-scrollbar { display:none }
+.slide { height:100%; min-height:100%; scroll-snap-align:start; scroll-snap-stop:always; position:relative; overflow:hidden }
+.feed:focus { outline:0 }
+img { display:block; max-width:100% }
+.loading-media { background:linear-gradient(110deg,#e2e4d7 30%,#eeeee6 45%,#e2e4d7 60%); background-size:250% 100% }
+.media-error { display:none!important }
+.filter { display:flex; align-items:center; gap:7px }
+.filter button { border-radius:100px; padding:0 16px; font-size:12px; min-height:34px; color:var(--muted); transition:background .18s }
+.filter button:hover { color:var(--ink) }
+.filter button[aria-pressed="true"] { background:var(--ink); color:var(--paper) }
+.small-dot { height:5px; width:5px; border-radius:50%; display:inline-block; background:currentColor; margin-right:8px; vertical-align:middle }
+.toast { position:fixed; z-index:200; bottom:110px; left:50%; transform:translate(-50%,15px); padding:12px 21px; border-radius:100px; background:#252a20; color:#f8f9f0; font-size:13px; box-shadow:0 8px 30px #0002; opacity:0; pointer-events:none; transition:opacity .2s,transform .2s; white-space:nowrap; max-width:calc(100vw - 32px) }
+.toast.show { opacity:1; transform:translate(-50%,0) }
+dialog { padding:0; color:var(--ink); background:var(--paper); border:1px solid var(--line); box-shadow:0 30px 100px #0003; max-height:calc(100dvh - 32px); overscroll-behavior:contain }
+dialog::backdrop { background:#0c120cb3; backdrop-filter:blur(5px) }
+dialog[open] { animation:dialog-in .25s ease-out }
+@keyframes dialog-in { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
+.dialog-top { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 26px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--paper); z-index:2 }
+.dialog-top h2 { font-size:17px; font-weight:600; margin:0 }
+.dialog-top .icon-btn { width:38px; height:38px; border:0 }
+.read-dialog { width:550px; height:calc(100dvh - 32px); margin:16px 16px 16px auto; border-radius:16px }
+.read-body { padding:25px 30px 35px }
+.read-cover { width:100%; height:230px; object-fit:cover; background:var(--line); border-radius:5px; margin-bottom:24px }
+.read-cover.diagram { object-fit:contain; background:#e7e9d7 }
+.read-title { font-size:34px; letter-spacing:-.04em; line-height:1.3; margin:10px 0 6px }
+.read-english { font-family:var(--serif); font-style:italic; font-size:21px; color:var(--muted); margin:0 0 22px }
+.read-body p { font-size:14px; line-height:1.95; color:#53584b }
+.read-body .note { font-size:11px; color:#777b6f; line-height:1.8 }
+.source-block { margin:26px 0; padding:18px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line) }
+.source-block a { font-size:12px; text-decoration:underline; text-underline-offset:4px; line-height:2.2 }
+.source-block .credit { font-size:10px; line-height:1.7; overflow-wrap:anywhere; margin-top:10px }
+.read-actions { display:flex; flex-wrap:wrap; align-items:center; gap:14px }
+.related { margin-top:32px }
+.related-title { font-size:12px; color:var(--muted); margin-bottom:14px }
+.related-row { display:flex; gap:9px; flex-wrap:wrap }
+.related-row button { border:1px solid var(--line); border-radius:99px; padding:0 15px; font-size:12px }
+.library-dialog { width:650px; border-radius:20px }
+.library-intro { padding:24px 28px 0 }
+.library-intro p { margin:0 0 18px; font-size:12px; color:var(--muted) }
+.search-box { width:100%; display:flex; align-items:center; gap:12px; border:1px solid #c9cdba; border-radius:8px; padding:0 15px; background:#fff8 }
+.search-box input { min-width:0; width:100%; height:48px; color:var(--ink); background:none; border:0; outline:none; font-size:14px }
+.search-box:focus-within { border-color:#657243; box-shadow:0 0 0 2px #65724322 }
+.result-list { min-height:100px; max-height:53dvh; overflow:auto; padding:15px 28px 24px }
+.result-item { width:100%; text-align:left; display:flex; align-items:center; gap:17px; min-height:96px; border-bottom:1px solid var(--line); padding:12px 0 }
+.result-item:last-child { border:0 }
+.result-thumb { width:66px; height:66px; flex:none; border-radius:5px; object-fit:cover; background:#e7e9d7; display:grid; place-items:center; font-family:var(--serif); font-size:30px }
+.result-thumb.diagram { object-fit:contain }
+.result-meta { min-width:0; flex:1 }
+.result-meta strong { font-size:14px; font-weight:500; display:block; margin-bottom:6px }
+.result-meta p { font-size:11px; color:var(--muted); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.result-item:hover strong { text-decoration:underline; text-underline-offset:4px }
+.empty-state { padding:50px 15px; text-align:center; color:var(--muted) }
+.empty-state .ico { width:34px; height:34px }
+.empty-state h3 { color:var(--ink); font-size:17px; font-weight:500 }
+.empty-state p { font-size:12px; line-height:1.8 }
+.about-body { padding:28px; max-width:500px }
+.about-body h3 { font-size:24px; margin:3px 0 18px }
+.about-body p { font-size:13px; line-height:1.9; color:var(--muted) }
+.kbd { font-family:var(--mono); display:inline-flex; align-items:center; justify-content:center; min-width:23px; height:23px; border:1px solid var(--line); border-radius:4px; padding:0 5px; font-size:11px; margin:0 2px }
+.lightbox { width:calc(100vw - 40px); height:calc(100dvh - 40px); max-width:none; background:#111611; border:0; border-radius:12px }
+.lightbox-inner { width:100%; height:100%; display:grid; place-items:center; position:relative }
+.lightbox img { max-width:94%; max-height:88%; object-fit:contain }
+.lightbox .diagram { background:#e7e9d7; border-radius:5px }
+.lightbox .close-lightbox { position:absolute; right:20px; top:15px; z-index:2; color:white; background:#2229; border-color:#fff4 }
+.lightbox p { position:absolute; bottom:4px; left:20px; right:20px; color:#c4c9be; font-size:11px; text-align:center; line-height:1.7 }
+.copy-input { width:100%; padding:13px; border:1px solid var(--line); border-radius:6px; font-size:12px; margin:15px 0 }
+@media (prefers-reduced-motion:reduce) {
+ *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important }
+}
+@media(max-width:700px) {
+ .read-dialog { width:100%; height:auto; max-height:92dvh; margin:auto 0 0; border-radius:22px 22px 0 0; border-bottom:0 }
+ .read-body { padding:20px 24px 30px }
+ .read-cover { height:180px }
+ .read-title { font-size:29px }
+ .dialog-top { padding:15px 21px }
+ .library-dialog { width:calc(100% - 24px); border-radius:16px }
+ .library-intro { padding:20px 20px 0 }
+ .result-list { padding:10px 20px 20px; max-height:55dvh }
+ .result-item { gap:12px }
+ .toast { bottom:105px; font-size:12px }
+ .icon-btn { width:44px; height:44px }
+}
+
+.mobile-only { display:none }
+.library-tabs { display:flex; gap:24px; margin-bottom:15px; border-bottom:1px solid var(--line) }
+.library-tabs button { min-height:40px; font-size:12px; color:var(--muted); border-bottom:2px solid transparent }
+.library-tabs button[aria-pressed="true"] { border-color:var(--ink); color:var(--ink) }
+@media(max-width:700px) { .mobile-only { display:inline-flex; align-items:center; justify-content:center; min-width:24px; min-height:44px }.mobile-only .ico { width:18px; height:18px } }

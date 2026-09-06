@@ -1,0 +1,8 @@
+title,slug,content,summary,kind,category,tags,aliases,author,sourceUrl,sourceTitle,sourceThreadId,externalId,status
+"[示例] 校园经验整理","sample-csv-guide","## 整理说明
+
+这是导入格式示例。请将正文替换为核对过的校园资料，并附上原帖出处。
+
+## 参考资料
+
+在这里列出真实的来源链接。","请替换为本校真实资料后再发布。",guide,校园生活,"示例|经验","生活指南",示例编辑,,,,example:csv-guide,draft

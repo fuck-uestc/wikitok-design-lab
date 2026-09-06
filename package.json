@@ -1,0 +1,53 @@
+{
+  "name": "campus-bbs-wiki",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24.0.0 <25" },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "concurrently -k -n api,web -c green,blue \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "tsx watch backend/src/index.ts",
+    "dev:web": "vite --config vite.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p backend/tsconfig.json",
+    "test": "tsx --test tests/*.test.ts",
+    "build": "tsc -p backend/tsconfig.json && vite build --config vite.config.ts",
+    "check": "node scripts/check.mjs",
+    "start": "node dist/server/backend/src/index.js",
+    "db:migrate": "tsx backend/src/cli.ts migrate",
+    "db:backup": "tsx backend/src/cli.ts backup",
+    "admin:reset": "tsx backend/src/cli.ts reset-admin",
+    "demo:import": "tsx backend/src/cli.ts demo"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "csv-parse": "^6.1.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "gray-matter": "^4.0.3",
+    "helmet": "^8.1.0",
+    "lucide-react": "^0.577.0",
+    "multer": "^2.0.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.13.0",
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@playwright/cli": "^0.1.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.1.1",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}

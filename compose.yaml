@@ -1,0 +1,28 @@
+version: "3.7"
+
+services:
+  wiki:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 3001
+      DATABASE_PATH: /app/data/wiki.sqlite
+      UPLOAD_DIR: /app/uploads
+      BACKUP_DIR: /app/backups
+      COOKIE_SECURE: "true"
+      TRUST_PROXY: 1
+    ports:
+      # Cloudflare Tunnel is configured to reach this host-local endpoint.
+      - "127.0.0.1:5173:3001"
+    volumes:
+      - wiki-data:/app/data
+      - wiki-uploads:/app/uploads
+      - wiki-backups:/app/backups
+    stop_grace_period: 15s
+volumes:
+  wiki-data:
+  wiki-uploads:
+  wiki-backups:
