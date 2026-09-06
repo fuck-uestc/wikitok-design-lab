@@ -18,6 +18,8 @@ test('MCP authenticates with the current admin password and manages artifact det
   assert.ok(listed.data.result.tools.some((tool: { name: string }) => tool.name === 'artifact_update'));
   const createTool = listed.data.result.tools.find((tool: { name: string }) => tool.name === 'artifact_create');
   assert.deepEqual(createTool.outputSchema.required.slice(0, 4), ['id', 'version', 'title', 'slug']);
+  const emptyList = await mcp(base, password, { jsonrpc: '2.0', id: 10, method: 'tools/call', params: { name: 'artifact_list', arguments: {}, _meta: { progressToken: 'client-metadata' } } });
+  assert.equal(emptyList.data.result.structuredContent.total, 0);
   const created = await mcp(base, password, { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'artifact_create', arguments: { artifact: record('MCP 条目', { status: 'draft' }) } } });
   const artifact = created.data.result.structuredContent;
   assert.equal(artifact.title, 'MCP 条目');

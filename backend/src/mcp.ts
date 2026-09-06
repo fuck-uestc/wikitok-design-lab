@@ -90,7 +90,10 @@ export async function handleMcpRequest(req: Request, res: Response, store: Store
   if (method === 'ping') { reply(res, id, {}); return; }
   if (method === 'tools/list') { reply(res, id, { tools }); return; }
   if (method === 'tools/call') {
-    const call = z.object({ name: z.string().min(1).max(100), arguments: z.unknown().optional() }).strict().safeParse(params);
+    // MCP clients may add transport metadata (for example `_meta.progressToken`) to
+    // a tools/call envelope. Validate the executable fields while accepting that
+    // metadata; individual tool argument schemas remain strict below.
+    const call = z.object({ name: z.string().min(1).max(100), arguments: z.unknown().optional() }).passthrough().safeParse(params);
     if (!call.success) { reply(res, id, { content: [{ type: 'text', text: JSON.stringify({ code: 'INVALID_PARAMS', message: 'tools/call 参数无效' }) }], isError: true }); return; }
     reply(res, id, toolCall(store, actor, call.data.name, call.data.arguments));
     return;
