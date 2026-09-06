@@ -399,3 +399,17 @@ body[data-theme="admin"] { --paper:#f6f5ef; --ink:#263122; --muted:#707865; --li
   .login-copyright { bottom:25px; }
 }
 @media(max-width:350px) { .admin-main { padding-left:16px; padding-right:16px; }.editor-footer { margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px; }.media-grid { grid-template-columns:1fr; }.media-card-preview { height:180px; }.stat-card { padding:14px; }.admin-tabs { gap:12px; }.import-main { padding:16px; } }
+
+/* Hidden autofill fields must not inherit the full-width admin input rules. */
+.admin-shell .sr-only,
+.admin-shell input.sr-only {
+  position:fixed; top:0; left:0;
+  width:1px!important; height:1px!important;
+  min-width:0!important; min-height:0!important;
+  padding:0!important; margin:0!important; border:0!important;
+  clip:rect(0,0,0,0); overflow:hidden;
+}
+.admin-shell input[type=checkbox] { min-height:0; width:17px; height:17px; }
+.feed-settings-panel { padding:28px; margin-bottom:25px; }
+.feed-settings-panel>h2 { margin-top:0; }
+@media(max-width:680px) { .feed-settings-panel { padding:20px; } }

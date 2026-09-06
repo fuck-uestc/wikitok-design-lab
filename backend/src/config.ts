@@ -1,8 +1,10 @@
 import 'dotenv/config';
 import { resolve } from 'node:path';
+import { defaultFeeds, feedSettingsSchema } from '../../shared/feeds.js';
 import type { SiteConfig } from '../../shared/types.js';
 
 export interface Config {
+  mcpToken: string; mcpReadToken: string; mcpAllowAdminPassword: boolean;
   env: string; host: string; port: number; root: string;
   databasePath: string; uploadDir: string; backupDir: string;
   adminUsername: string; adminPassword: string; sessionHours: number;
@@ -44,7 +46,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   for (const origin of origins) { if (new URL(origin).origin !== origin || !/^https?:/.test(origin)) throw new Error('CORS_ORIGINS 只能包含完整 origin，不能使用 * 或路径'); }
   const threadUrlTemplate = env.BBS_THREAD_URL_TEMPLATE?.trim() || '';
   if (threadUrlTemplate && (!threadUrlTemplate.includes('{id}') || !/^https?:\/\//.test(threadUrlTemplate))) throw new Error('BBS_THREAD_URL_TEMPLATE 需要 http(s) URL 和 {id} 占位符');
+  const feedSettings = feedSettingsSchema.parse({ feeds: env.FEEDS_JSON ? JSON.parse(env.FEEDS_JSON) : defaultFeeds, defaultFeed: env.DEFAULT_FEED || 'main', version: 1 });
+  const mcpToken = env.MCP_TOKEN?.trim() || '';
+  const mcpReadToken = env.MCP_READ_TOKEN?.trim() || '';
+  for (const token of [mcpToken, mcpReadToken]) if (token && (token.length < 32 || token.length > 256 || /\s/.test(token))) throw new Error('MCP tokens must be 32-256 characters without whitespace');
+  if (mcpToken && mcpToken === mcpReadToken) throw new Error('MCP_TOKEN and MCP_READ_TOKEN must differ');
   return {
+    mcpToken, mcpReadToken, mcpAllowAdminPassword: boolean('MCP_ALLOW_ADMIN_PASSWORD', false),
     env: env.NODE_ENV || 'development', root, host: env.BACKEND_HOST || '127.0.0.1', port,
     databasePath: env.DATABASE_PATH === ':memory:' ? ':memory:' : resolve(root, env.DATABASE_PATH || 'data/wiki.sqlite'),
     uploadDir: resolve(root, env.UPLOAD_DIR || 'uploads'), backupDir: resolve(root, env.BACKUP_DIR || 'backups'),
@@ -52,6 +60,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     sessionHours: integer('SESSION_TTL_HOURS', 12, 1, 168), cookieSecure, cookieSameSite: cookieSameSite as Config['cookieSameSite'],
     trustProxy: integer('TRUST_PROXY', 0, 0, 5), origins,
     uploadMb: integer('MAX_UPLOAD_MB', 10, 1, 50), importMb: integer('MAX_IMPORT_MB', 5, 1, 20), importMax: integer('IMPORT_MAX_RECORDS', 500, 1, 2000), threadUrlTemplate,
-    site: { siteName: env.SITE_NAME || '校园 BBS Wiki', shortName: env.SITE_SHORT_NAME || '校园志', description: env.SITE_DESCRIPTION || '把校园里的故事、经验和共同记忆，慢慢收藏。', tagline: env.SITE_TAGLINE || '校园有回声，记忆有来处。', defaultTheme: theme as SiteConfig['defaultTheme'], siteUrl, apiBaseUrl, bbsBaseUrl: url('BBS_BASE_URL'), contactEmail: env.CONTACT_EMAIL || '' }
+    site: { feeds: feedSettings.feeds, defaultFeed: feedSettings.defaultFeed, siteName: env.SITE_NAME || '校园 BBS Wiki', shortName: env.SITE_SHORT_NAME || '校园志', description: env.SITE_DESCRIPTION || '把校园里的故事、经验和共同记忆，慢慢收藏。', tagline: env.SITE_TAGLINE || '校园有回声，记忆有来处。', defaultTheme: theme as SiteConfig['defaultTheme'], siteUrl, apiBaseUrl, bbsBaseUrl: url('BBS_BASE_URL'), contactEmail: env.CONTACT_EMAIL || '' }
   };
 }

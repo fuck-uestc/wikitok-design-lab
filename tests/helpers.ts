@@ -11,7 +11,7 @@ export const password = 'Test-only-passphrase-2026!';
 export const record = (title: string, extra: Record<string, unknown> = {}) => ({ title, content: `## ${title}\n\n这是一条在隔离测试数据库中创建的校园资料。`, ...extra });
 export async function fixture(t: TestContext, overrides: NodeJS.ProcessEnv = {}) {
   const directory = mkdtempSync(join(tmpdir(), 'campus-wiki-test-'));
-  const env = { NODE_ENV: 'test', SITE_NAME: '测试校园 Wiki', PUBLIC_SITE_URL: 'http://localhost:5173', PUBLIC_API_BASE_URL: '/api', DATABASE_PATH: join(directory, 'wiki.sqlite'), UPLOAD_DIR: join(directory, 'uploads'), BACKUP_DIR: join(directory, 'backups'), ADMIN_USERNAME: 'admin', ADMIN_PASSWORD: password, COOKIE_SECURE: 'false', COOKIE_SAME_SITE: 'lax', CORS_ORIGINS: 'http://localhost:5173', TRUST_PROXY: '0', MAX_UPLOAD_MB: '1', ...overrides };
+  const env = { NODE_ENV: 'test', MCP_ALLOW_ADMIN_PASSWORD: 'true', SITE_NAME: '测试校园 Wiki', PUBLIC_SITE_URL: 'http://localhost:5173', PUBLIC_API_BASE_URL: '/api', DATABASE_PATH: join(directory, 'wiki.sqlite'), UPLOAD_DIR: join(directory, 'uploads'), BACKUP_DIR: join(directory, 'backups'), ADMIN_USERNAME: 'admin', ADMIN_PASSWORD: password, COOKIE_SECURE: 'false', COOKIE_SAME_SITE: 'lax', CORS_ORIGINS: 'http://localhost:5173', TRUST_PROXY: '0', MAX_UPLOAD_MB: '1', ...overrides };
   const config = loadConfig(env);
   const application = createApp(config);
   const server = application.app.listen(0, '127.0.0.1');

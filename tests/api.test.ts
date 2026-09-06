@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { artifactSchema } from '../shared/schema.js';
 import { fixture, filesBody, password, record } from './helpers.js';
@@ -20,7 +21,7 @@ test('bootstraps an empty migrated database and exposes only public configuratio
   assert.match(runtime.response.headers.get('cache-control')!, /no-store/);
   assert.equal((await f.publicClient.request('/api/artifacts')).data.total, 0);
   assert.equal((await f.admin.request('/api/admin/stats')).data.published, 0);
-  assert.equal(f.store.db.prepare('SELECT COUNT(*) n FROM schema_migrations').get()!.n, 1);
+  assert.equal(f.store.db.prepare('SELECT COUNT(*) n FROM schema_migrations').get()!.n, 2);
   const readOnly = new DatabaseSync(f.config.databasePath, { readOnly: true });
   assert.equal(readOnly.prepare('SELECT COUNT(*) n FROM admins').get()!.n, 1);
   readOnly.close();
@@ -83,7 +84,7 @@ test('uses real pagination without duplicates, escapes LIKE patterns and exclude
   const ids: string[] = [];
   let cursor: string | null = null;
   do {
-    const result = (await f.publicClient.request(`/api/artifacts?limit=7${cursor ? `&cursor=${cursor}` : ''}`)).data;
+    const result: any = (await f.publicClient.request(`/api/artifacts?limit=7${cursor ? `&cursor=${cursor}` : ''}`)).data;
     assert.equal(result.total, 31); assert.ok(result.items.length <= 7);
     ids.push(...result.items.map((item: { id: string }) => item.id)); cursor = result.nextCursor;
   } while (cursor);
@@ -156,7 +157,7 @@ test('backup CLI copies a consistent SQLite snapshot and media with integrity ma
   const f = await fixture(t);
   f.store.save(artifactSchema.parse(record('备份验证', { status: 'published' })), 'test');
   await f.admin.request('/api/admin/media', { method: 'POST', body: filesBody([{ name: '备份.txt', content: '备份文件内容' }]), expected: 201 });
-  execFileSync(process.execPath, ['--import', 'tsx', 'backend/src/cli.ts', 'backup'], { cwd: process.cwd(), env: { ...process.env, ...f.env }, encoding: 'utf8', timeout: 30000, stdio: 'pipe' });
+  execFileSync(process.execPath, [fileURLToPath(new URL('../backend/src/cli.js', import.meta.url)), 'backup'], { cwd: process.cwd(), env: { ...process.env, ...f.env }, encoding: 'utf8', timeout: 30000, stdio: 'pipe' });
   const backupDir = join(f.config.backupDir, readdirSync(f.config.backupDir)[0]);
   const manifest = JSON.parse(readFileSync(join(backupDir, 'manifest.json'), 'utf8'));
   assert.equal(manifest.integrity, 'ok'); assert.equal(manifest.artifacts, 1); assert.equal(manifest.media, 1);

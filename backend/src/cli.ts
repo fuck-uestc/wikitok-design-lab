@@ -37,7 +37,7 @@ try {
     try {
       const integrity = check.prepare('PRAGMA integrity_check').get();
       if (!integrity || Object.values(integrity)[0] !== 'ok') throw new Error('备份数据库完整性检查失败');
-      const manifest = { createdAt: new Date().toISOString(), appVersion: '1.0.0', schemaVersion: Number(check.prepare('SELECT MAX(version) version FROM schema_migrations').get()?.version), artifacts: Number(check.prepare('SELECT COUNT(*) n FROM artifacts').get()?.n), media: Number(check.prepare('SELECT COUNT(*) n FROM media').get()?.n), uploadedFiles: readdirSync(join(destination, 'uploads')).length, integrity: 'ok' };
+      const manifest = { createdAt: new Date().toISOString(), appVersion: '2.0.0', schemaVersion: Number(check.prepare('SELECT MAX(version) version FROM schema_migrations').get()?.version), artifacts: Number(check.prepare('SELECT COUNT(*) n FROM artifacts').get()?.n), media: Number(check.prepare('SELECT COUNT(*) n FROM media').get()?.n), uploadedFiles: readdirSync(join(destination, 'uploads')).length, integrity: 'ok' };
       writeFileSync(join(destination, 'manifest.json'), JSON.stringify(manifest, null, 2), { encoding: 'utf8', flag: 'wx' });
     } finally { check.close(); }
     console.log(`备份及完整性检查完成：${destination}`);

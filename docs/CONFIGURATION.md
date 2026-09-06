@@ -9,7 +9,7 @@ npm.cmd ci
 npm.cmd run setup
 ```
 
-`setup` 复制 `.env.example` 并生成 24 字节随机管理员密码。已经存在 `.env` 时，不会覆盖它。可以直接用编辑器打开 `.env` 查看并调整配置；不要将密码填入前端代码、命令行参数或公开文档。
+`setup` 复制 `.env.example` 并分别生成 32 字节随机管理员密码与 MCP_TOKEN。已经存在 `.env` 时，普通 setup 不修改它。升级使用 `npm run setup -- --upgrade`，只补齐缺少的键，不旋转旧凭据；已有空 MCP_TOKEN 也会保留。可以直接用编辑器打开 `.env` 查看并调整配置；不要将密码填入前端代码、命令行参数或公开文档。
 
 启动服务会自动创建 `DATABASE_PATH` 的父目录、数据库及 `UPLOAD_DIR`，执行尚未应用的迁移。空库首次启动要求有效 `ADMIN_PASSWORD`；不会内置通用默认密码。后续启动沿用数据库中的管理员及密码。
 
@@ -30,7 +30,7 @@ npm.cmd run setup
 
 `PUBLIC_API_BASE_URL` 必须是浏览器能访问的地址，不能填写 Docker 容器内部主机名或只在服务器可见的地址。项目 API 固定挂载在 `/api` 下。
 
-只有 `siteName`、`shortName`、`description`、`tagline`、`defaultTheme`、`siteUrl`、`apiBaseUrl`、`bbsBaseUrl`、`contactEmail` 会进入 `/runtime-config.js` 与 `/api/config`。管理员密码、数据库路径、会话配置均不进入前端。
+只有启用的 `feeds`、`defaultFeed`、`siteName`、`shortName`、`description`、`tagline`、`defaultTheme`、`siteUrl`、`apiBaseUrl`、`bbsBaseUrl`、`contactEmail` 会进入 `/runtime-config.js` 与 `/api/config`。管理员密码、数据库路径、会话配置均不进入前端。
 
 正式 Node 服务在每次启动时生成运行时配置。因此，使用完整 Node 服务或 Docker 部署时，修改品牌或后端地址后重启服务即可，不需要重建前端。若将 `dist/client` 单独部署到静态托管，则需要重新构建或更新静态站点的 `runtime-config.js`；浏览器必须先从这个文件得知 API 地址。
 
@@ -156,3 +156,29 @@ TRUST_PROXY=1
 | 网站仍显示旧名称或旧 API | 完整 Node 服务重启；静态托管更新 runtime-config.js，检查代理缓存 |
 | 数据库锁定或 I/O 错误 | 检查是否有多个服务或跨系统进程共用 DB、文件系统权限与磁盘空间 |
 | public API 返回空列表 | 初始库为空，或所有条目还在草稿/归档；后台发布后才会公开 |
+
+
+## 信息流与 MCP（v2）
+
+| 字段 | 默认值 | 说明 |
+| --- | --- | --- |
+| `DEFAULT_FEED` | `main` | 未保存后台信息流设置时的首页；必须是启用的流 |
+| `FEEDS_JSON` | 空 | 初始流定义数组的 JSON；空则使用 main/wiki/slices |
+| `MCP_TOKEN` | setup 随机生成 | MCP 读写管理凭据，可读草稿、编辑、发布和归档 |
+| `MCP_READ_TOKEN` | 空 | 可选的只读管理凭据；可以读取草稿，不是公开访问 token |
+| `MCP_ALLOW_ADMIN_PASSWORD` | `false` | 配置独立 token 后，设为 `true` 才继续接受当前管理员密码作为 MCP Bearer；两个 token 均为空时保留既有密码兼容 |
+
+两个独立 MCP token 都须为 32–256 字符，无空白且互不相同；空值关闭该独立凭据。凭据只通过服务端环境设置，后台只展示启用状态，不会读出或导出 token。修改后重启服务生效；修改管理员密码会立即撤销密码兼容认证，但不会撤销独立 MCP token，应单独轮换。
+
+`FEEDS_JSON` 例子：
+
+```dotenv
+DEFAULT_FEED=slices
+FEEDS_JSON='[{"id":"slices","label":"切片","description":"","formats":["short"],"enabled":true}]'
+```
+
+初次启动未保存流配置时读取这些环境值；在后台或 MCP 保存后，以 SQLite 的设置为准。改环境值不会覆盖已保存配置。环境值仍须语法有效，避免启动报错。
+
+流投放不会自动复制数据。自定义 ID 后需要在编辑器或 MCP 修改条目的 feedIds；默认投放规则固定为长文 main/wiki、切片 main/slices。修改 ID 不自动迁移旧关系。首次采用完全自定义流名时，应显式填写投放 ID。
+
+开发环境通过 Vite 将 `/mcp` 与 `/api` 代理到 `DEV_API_TARGET`。生产使用同一 Express 服务的 `/mcp`，不需要另开进程。详见 [MCP.md](MCP.md)。

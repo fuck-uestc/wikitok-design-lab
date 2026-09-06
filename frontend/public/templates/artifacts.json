@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "artifacts": [
     {
       "title": "[示例] 新生信息索引",
@@ -7,8 +7,13 @@
       "externalId": "example:freshman-index",
       "kind": "guide",
       "category": "新生指南",
-      "tags": ["示例", "索引"],
-      "aliases": ["入学指南"],
+      "tags": [
+        "示例",
+        "索引"
+      ],
+      "aliases": [
+        "入学指南"
+      ],
       "summary": "演示如何把分散的 BBS 经验帖整理为可追溯的 Wiki 条目。请替换为本校真实资料后再发布。",
       "content": "> 这是格式示例，不代表任何学校的实际规定。\n\n## 条目概述\n\n在这里整理报到、选课、校园生活等信息，并为每项内容附上真实来源。\n\n## 资料清单\n\n- 信息标题与适用时间\n- BBS 原帖链接及原作者\n- 需要持续更新的说明\n\n## 更新记录\n\n首次整理。请由管理员核对内容后发布。",
       "author": "示例编辑",
@@ -20,7 +25,12 @@
       "coverCredit": "",
       "eventDate": "",
       "status": "draft",
-      "attachmentIds": []
+      "attachmentIds": [],
+      "format": "long",
+      "feedIds": [
+        "main",
+        "wiki"
+      ]
     },
     {
       "title": "[示例] 一个校园词语的来历",
@@ -28,11 +38,107 @@
       "externalId": "example:campus-word",
       "kind": "glossary",
       "category": "社区文化",
-      "tags": ["示例", "校园词典"],
-      "aliases": ["示例旧称"],
+      "tags": [
+        "示例",
+        "校园词典"
+      ],
+      "aliases": [
+        "示例旧称"
+      ],
       "summary": "一个适用于校园俗称、社区梗和 BBS 历史的条目模板。",
       "content": "> 这是结构模板，尚未填写真实史料。\n\n## 含义\n\n说明这个词语在社区中的含义。\n\n## 来历\n\n列出可以核实的早期帖子，区分已证实的信息与传闻。\n\n## 相关称呼\n\n把曾用名放入 aliases 字段，让旧称也能搜索到这里。",
-      "status": "draft"
+      "status": "draft",
+      "format": "long",
+      "feedIds": [
+        "main",
+        "wiki"
+      ]
+    },
+    {
+      "title": "[虚构示例] 关于自愿参加",
+      "slug": "sample-voluntary",
+      "format": "short",
+      "feedIds": [
+        "main",
+        "slices"
+      ],
+      "category": "通知片段",
+      "tags": [
+        "虚构示例"
+      ],
+      "status": "draft",
+      "short": {
+        "layout": "quote",
+        "text": "活动完全自愿，\n不参加的同学\n请说明理由。",
+        "context": "这是用于展示排版的虚构通知，不对应真实人物或事件。",
+        "attribution": "虚构通知",
+        "verification": "unverified",
+        "sources": [
+          {
+            "label": "虚构活动通知",
+            "date": "样例材料",
+            "excerpt": "关于本次活动的参与说明\n\n活动完全自愿，不参加的同学请说明理由。\n\n（虚构排版示例，非真实通知）"
+          }
+        ]
+      }
+    },
+    {
+      "title": "[虚构示例] 说法与执行",
+      "slug": "sample-comparison",
+      "format": "short",
+      "feedIds": [
+        "main",
+        "slices"
+      ],
+      "category": "前后对照",
+      "tags": [
+        "虚构示例"
+      ],
+      "status": "draft",
+      "short": {
+        "layout": "comparison",
+        "context": "两段虚构文字，用于展示独立来源和时间标注。真实对照请核对对象和适用范围。",
+        "sources": [
+          {
+            "label": "虚构说明 A",
+            "excerpt": "办理全程线上完成。"
+          },
+          {
+            "label": "虚构说明 B",
+            "excerpt": "请打印申请表，到现场提交。"
+          }
+        ],
+        "comparison": [
+          {
+            "label": "页面说明",
+            "text": "全程线上办理，\n不用跑腿。",
+            "sourceIndex": 0
+          },
+          {
+            "label": "提交之后",
+            "text": "请打印申请表，\n到现场提交。",
+            "sourceIndex": 1
+          }
+        ]
+      }
+    },
+    {
+      "title": "[虚构示例] 循环证明",
+      "slug": "sample-note",
+      "format": "short",
+      "feedIds": [
+        "slices"
+      ],
+      "category": "办事过程",
+      "tags": [
+        "虚构示例"
+      ],
+      "status": "draft",
+      "short": {
+        "layout": "note",
+        "text": "申请 A 证明需要 B 证明；申请 B 证明，需要先提供 A 证明。",
+        "context": "虚构流程示例。这是编者概述，不是逐字引语。"
+      }
     }
   ]
 }

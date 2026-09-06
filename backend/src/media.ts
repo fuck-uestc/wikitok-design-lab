@@ -16,7 +16,7 @@ function detect(buffer: Buffer, originalName: string): { mime: string; extension
   }
   return null;
 }
-export function uploadMedia(store: Store, files: Express.Multer.File[], actor: string): Media[] {
+export function uploadMedia(store: Store, files: Pick<Express.Multer.File, 'originalname' | 'buffer' | 'size'>[], actor: string): Media[] {
   const validated = files.map(file => {
     const format = detect(file.buffer, file.originalname);
     if (!format || !file.size) throw new ApiError(400, 'UNSUPPORTED_MEDIA', `${file.originalname}：只支持 PNG、JPEG、GIF、WebP、PDF 和 UTF-8 TXT；文件内容需与格式一致`);

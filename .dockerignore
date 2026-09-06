@@ -13,3 +13,11 @@ output
 previews
 demo-*.html
 *.log
+
+.test-build
+.qa-build
+.qa-web
+tsconfig.qa.json
+qa-*.mjs
+qa-*.cjs
+verification

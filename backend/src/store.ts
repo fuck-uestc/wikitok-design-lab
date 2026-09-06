@@ -1,13 +1,16 @@
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import type { Artifact, ArtifactInput, ArtifactSummary, Media, Page, Revision, Stats, Taxonomy } from '../../shared/types.js';
-import { slugify, summarize } from '../../shared/schema.js';
+import { artifactSchema, slugify, summarize } from '../../shared/schema.js';
+import { feedSettingsSchema } from '../../shared/feeds.js';
+import type { ContentFormat, FeedSettings } from '../../shared/types.js';
 import { migrations } from './migrations.js';
 import { ApiError } from './errors.js';
 import type { Config } from './config.js';
 
+export interface ArtifactQuery { q?: string; category?: string; tag?: string; status?: string; ids?: string[]; feed?: string; format?: ContentFormat; cursor?: string; limit?: number }
 type Row = Record<string, string | number | null>;
 const value = (row: Row, key: string) => String(row[key] ?? '');
 const now = () => new Date().toISOString();
@@ -44,6 +47,21 @@ export class Store {
     catch (error) { this.db.exec('ROLLBACK'); throw error; }
     finally { this.transactionDepth--; }
   }
+  feedSettings(): FeedSettings {
+    const row = this.db.prepare("SELECT value,version FROM site_settings WHERE key='feeds'").get();
+    return row ? feedSettingsSchema.parse({ ...JSON.parse(String(row.value)), version: Number(row.version) }) : { feeds: this.config.site.feeds, defaultFeed: this.config.site.defaultFeed, version: 1 };
+  }
+  publicSite() { const settings = this.feedSettings(); return { ...this.config.site, feeds: settings.feeds.filter(f => f.enabled), defaultFeed: settings.defaultFeed }; }
+  saveFeedSettings(raw: unknown, actor: string): FeedSettings {
+    const settings = feedSettingsSchema.parse(raw);
+    return this.transaction(() => {
+      if (settings.version !== this.feedSettings().version) throw new ApiError(409, 'VERSION_CONFLICT', 'Feed settings changed; reload before saving.');
+      const next = { ...settings, version: settings.version + 1 };
+      this.db.prepare("INSERT INTO site_settings(key,value,version) VALUES('feeds',?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,version=excluded.version").run(JSON.stringify(next), next.version);
+      this.audit(actor, 'configure-feeds', 'feeds', JSON.stringify(next));
+      return next;
+    });
+  }
   close() { this.db.close(); }
   audit(actor: string, action: string, target = '', detail = '') {
     this.db.prepare('INSERT INTO audit_logs(actor,action,target_id,detail,created_at) VALUES(?,?,?,?,?)').run(actor, action, target, detail, now());
@@ -60,6 +78,7 @@ export class Store {
     const tags = this.db.prepare('SELECT t.name FROM tags t JOIN artifact_tags a ON a.tag_id=t.id WHERE a.artifact_id=? ORDER BY t.name').all(id) as Row[];
     const media = this.db.prepare('SELECT m.* FROM media m JOIN artifact_media a ON a.media_id=m.id WHERE a.artifact_id=? ORDER BY a.position').all(id) as Row[];
     return {
+      format: value(row, 'format') as ContentFormat, feedIds: JSON.parse(value(row, 'feed_ids')), short: JSON.parse(value(row, 'short_json')),
       id, title: value(row, 'title'), slug: value(row, 'slug'), summary: value(row, 'summary'), content: value(row, 'content'),
       kind: value(row, 'kind') as Artifact['kind'], category: value(row, 'category'), tags: tags.map(t => value(t, 'name')),
       aliases: JSON.parse(value(row, 'aliases')), author: value(row, 'author'), sourceUrl: value(row, 'source_url'), sourceTitle: value(row, 'source_title'), sourceThreadId: value(row, 'source_thread_id'), externalId: value(row, 'external_id'),
@@ -82,15 +101,19 @@ export class Store {
       const cover = this.mediaRow(input.coverMediaId);
       if (!cover || !value(cover, 'mime_type').startsWith('image/')) throw new ApiError(400, 'INVALID_COVER', '封面必须是已上传的图片');
     }
-    for (const id of input.attachmentIds) if (!this.mediaRow(id)) throw new ApiError(400, 'MISSING_ATTACHMENT', `附件不存在：${id}`);
+    for (const id of [...input.attachmentIds, ...(input.short?.sources.map(s => s.mediaId).filter(Boolean) || [])]) if (!this.mediaRow(id)) throw new ApiError(400, 'MISSING_ATTACHMENT', `附件不存在：${id}`);
   }
   save(input: ArtifactInput, actor: string, id?: string, expectedVersion?: number, action?: string): Artifact {
+    input = artifactSchema.parse(input);
     return this.transaction(() => {
       const existing = id ? this.get(id) : null;
       if (id && !existing) throw new ApiError(404, 'NOT_FOUND', '条目不存在');
       if (existing && expectedVersion !== existing.version) throw new ApiError(409, 'VERSION_CONFLICT', '条目已被其他操作更新，请重新载入后再保存');
+      if (existing) id = existing.id;
       this.validateMedia(input);
-      const data = { ...input, slug: input.slug || slugify(input.title), summary: input.summary || summarize(input.content) };
+      const data = { ...input, slug: input.slug || slugify(input.title), summary: input.format === 'short' ? summarize(input.short?.layout === 'comparison' ? input.short.comparison.map(c => c.text).join(' / ') : input.short?.text || input.title) : input.summary || summarize(input.content) };
+      data.attachmentIds = [...new Set([...data.attachmentIds, ...(data.short?.sources.map(s => s.mediaId).filter(Boolean) || [])])];
+      if (data.attachmentIds.length > 20) throw new ApiError(400, 'TOO_MANY_ATTACHMENTS', 'At most 20 attachments including source materials.');
       const conflict = this.identity(data);
       if (conflict && conflict.id !== id) throw new ApiError(409, 'DUPLICATE_ARTIFACT', `标识或外部 ID 已存在：${conflict.title}`);
       const artifactId = id || randomUUID();
@@ -98,6 +121,7 @@ export class Store {
       const version = existing ? existing.version + 1 : 1;
       const publishedAt = data.status === 'published' ? existing?.publishedAt || timestamp : existing?.publishedAt || null;
       const columns: Record<string, SQLInputValue> = {
+        format: data.format, feed_ids: JSON.stringify(data.feedIds), short_json: JSON.stringify(data.short),
         slug: data.slug, external_id: data.externalId || null, title: data.title, summary: data.summary, content: data.content, kind: data.kind, category: data.category, aliases: JSON.stringify(data.aliases),
         author: data.author, source_url: data.sourceUrl, source_title: data.sourceTitle, source_thread_id: data.sourceThreadId,
         cover_url: data.coverUrl, cover_media_id: data.coverMediaId, cover_alt: data.coverAlt, cover_credit: data.coverCredit, event_date: data.eventDate,
@@ -122,9 +146,16 @@ export class Store {
       return this.get(artifactId)!;
     });
   }
-  filter(query: { q?: string; category?: string; tag?: string; status?: string; ids?: string[] }, admin = false) {
+  filter(query: ArtifactQuery, admin = false) {
     const conditions = admin ? ['1=1'] : ["a.status='published'"];
     const params: SQLInputValue[] = [];
+    if (query.format) { conditions.push('a.format=?'); params.push(query.format); }
+    if (query.feed) {
+      const feed = this.feedSettings().feeds.find(f => f.id === query.feed && (admin || f.enabled));
+      if (!feed) throw new ApiError(404, 'FEED_NOT_FOUND', 'Information stream is unavailable.');
+      conditions.push('EXISTS(SELECT 1 FROM json_each(a.feed_ids) membership WHERE membership.value=?)'); params.push(feed.id);
+      conditions.push(`a.format IN (${feed.formats.map(() => '?').join(',')})`); params.push(...feed.formats);
+    }
     if (admin && query.status) { conditions.push('a.status=?'); params.push(query.status); }
     if (query.category) { conditions.push('a.category=?'); params.push(query.category); }
     if (query.tag) { conditions.push('EXISTS(SELECT 1 FROM artifact_tags at JOIN tags t ON t.id=at.tag_id WHERE at.artifact_id=a.id AND t.name=?)'); params.push(query.tag); }
@@ -133,20 +164,22 @@ export class Store {
     }
     if (query.q) {
       const term = `%${query.q.normalize('NFKC').replace(/[\\%_]/g, '\\$&')}%`;
-      conditions.push(`(a.title LIKE ? ESCAPE '\\' OR a.summary LIKE ? ESCAPE '\\' OR a.content LIKE ? ESCAPE '\\' OR a.aliases LIKE ? ESCAPE '\\' OR a.author LIKE ? ESCAPE '\\' OR a.source_thread_id LIKE ? ESCAPE '\\' OR EXISTS(SELECT 1 FROM artifact_tags at JOIN tags t ON t.id=at.tag_id WHERE at.artifact_id=a.id AND t.name LIKE ? ESCAPE '\\'))`);
-      params.push(...Array<SQLInputValue>(7).fill(term));
+      conditions.push(`(a.title LIKE ? ESCAPE '\\' OR a.summary LIKE ? ESCAPE '\\' OR a.content LIKE ? ESCAPE '\\' OR a.short_json LIKE ? ESCAPE '\\' OR a.aliases LIKE ? ESCAPE '\\' OR a.author LIKE ? ESCAPE '\\' OR a.source_thread_id LIKE ? ESCAPE '\\' OR EXISTS(SELECT 1 FROM artifact_tags at JOIN tags t ON t.id=at.tag_id WHERE at.artifact_id=a.id AND t.name LIKE ? ESCAPE '\\'))`);
+      params.push(...Array<SQLInputValue>(8).fill(term));
     }
     return { where: conditions.join(' AND '), params };
   }
-  list(query: { q?: string; category?: string; tag?: string; ids?: string[]; cursor?: string; limit: number }): Page<ArtifactSummary> {
+  list(query: ArtifactQuery & { limit: number }): Page<ArtifactSummary> {
     const { where, params } = this.filter(query);
     const total = Number(this.db.prepare(`SELECT COUNT(*) n FROM artifacts a WHERE ${where}`).get(...params)?.n);
+    const scope = createHash('sha256').update(JSON.stringify({ q: query.q || '', category: query.category || '', tag: query.tag || '', ids: query.ids || null, feed: query.feed || '', format: query.format || '', config: query.feed ? this.feedSettings().version : 0 })).digest('hex').slice(0, 20);
     let cursorWhere = '';
     const cursorParams: SQLInputValue[] = [];
     if (query.cursor) {
       try {
         const cursor = JSON.parse(Buffer.from(query.cursor, 'base64url').toString('utf8'));
         if (typeof cursor.date !== 'string' || typeof cursor.id !== 'string' || cursor.date.length > 40 || cursor.id.length > 64) throw new Error();
+        if (cursor.scope !== undefined && cursor.scope !== scope) throw new Error();
         cursorWhere = ' AND (a.published_at < ? OR (a.published_at = ? AND a.id < ?))'; cursorParams.push(cursor.date, cursor.date, cursor.id);
       } catch { throw new ApiError(400, 'INVALID_CURSOR', '分页游标无效，请重新加载'); }
     }
@@ -154,21 +187,23 @@ export class Store {
     const hasMore = rows.length > query.limit;
     const page = rows.slice(0, query.limit);
     const last = page.at(-1);
-    return { items: page.map(row => toSummary(this.hydrate(row))), total, nextCursor: hasMore && last ? Buffer.from(JSON.stringify({ date: last.published_at, id: last.id })).toString('base64url') : null };
+    return { items: page.map(row => toSummary(this.hydrate(row))), total, nextCursor: hasMore && last ? Buffer.from(JSON.stringify({ date: last.published_at, id: last.id, scope })).toString('base64url') : null };
   }
-  adminList(query: { q?: string; status?: string; page: number; limit: number }) {
+  adminList(query: ArtifactQuery & { page: number; limit: number }) {
     const { where, params } = this.filter(query, true);
     const total = Number(this.db.prepare(`SELECT COUNT(*) n FROM artifacts a WHERE ${where}`).get(...params)?.n);
     const rows = this.db.prepare(`SELECT a.* FROM artifacts a WHERE ${where} ORDER BY a.updated_at DESC,a.id DESC LIMIT ? OFFSET ?`).all(...params, query.limit, (query.page - 1) * query.limit) as Row[];
     return { items: rows.map(row => toSummary(this.hydrate(row))), total, page: query.page, pages: Math.ceil(total / query.limit) };
   }
-  random(category = ''): ArtifactSummary | null {
-    const row = this.db.prepare(`SELECT * FROM artifacts WHERE status='published'${category ? ' AND category=?' : ''} ORDER BY random() LIMIT 1`).get(...(category ? [category] : [])) as Row | undefined;
+  random(query: ArtifactQuery | string = {}): ArtifactSummary | null {
+    const { where, params } = this.filter(typeof query === 'string' ? { category: query } : query);
+    const row = this.db.prepare(`SELECT a.* FROM artifacts a WHERE ${where} ORDER BY random() LIMIT 1`).get(...params) as Row | undefined;
     return row ? toSummary(this.hydrate(row)) : null;
   }
-  taxonomy(): Taxonomy {
-    const categories = this.db.prepare("SELECT category name,COUNT(*) count FROM artifacts WHERE status='published' AND category<>'' GROUP BY category ORDER BY count DESC,name").all() as Row[];
-    const tags = this.db.prepare("SELECT t.name,COUNT(*) count FROM tags t JOIN artifact_tags at ON t.id=at.tag_id JOIN artifacts a ON a.id=at.artifact_id WHERE a.status='published' GROUP BY t.id ORDER BY count DESC,t.name LIMIT 100").all() as Row[];
+  taxonomy(query: ArtifactQuery = {}): Taxonomy {
+    const { where, params } = this.filter(query);
+    const categories = this.db.prepare(`SELECT a.category name,COUNT(*) count FROM artifacts a WHERE ${where} AND a.category<>'' GROUP BY a.category ORDER BY count DESC,name`).all(...params) as Row[];
+    const tags = this.db.prepare(`SELECT t.name,COUNT(*) count FROM tags t JOIN artifact_tags at ON t.id=at.tag_id JOIN artifacts a ON a.id=at.artifact_id WHERE ${where} GROUP BY t.id ORDER BY count DESC,t.name LIMIT 100`).all(...params) as Row[];
     return { categories: categories.map(r => ({ name: value(r, 'name'), count: Number(r.count) })), tags: tags.map(r => ({ name: value(r, 'name'), count: Number(r.count) })) };
   }
   revisions(id: string): Revision[] {

@@ -4,6 +4,18 @@ API 固定挂载在 `/api`。下面使用本机开发入口 `http://localhost:51
 
 除文件下载、`/runtime-config.js` 和明确标注的 204 响应外，响应体均为 JSON；成功响应直接返回对象或数组，没有统一的 `data` 包装。请求 JSON 使用 `Content-Type: application/json`，请求体限制为 2 MiB。上传使用 `multipart/form-data`，由客户端生成 boundary。
 
+## v2 新增契约
+
+`ArtifactInput` / `Artifact` 新增 `format: "long" | "short"`、`feedIds: string[]`、`short: ShortContent | null`。旧记录默认 `long`，投放 `main` 与 `wiki`；旧输入省略新字段仍有效。`kind` 保留原有主题分类含义，不用它判断长短。`ArtifactSummary` **保留完整 short 字段**，浏览卡片不必额外取详情。
+
+公开列表、随机、taxonomy 和管理员列表接受 `feed` 与 `format`。指定 `feed` 会同时检查流已启用、条目投放关系和流允许的格式；公开接口再限制为已发布。不指定 `feed` 表示全站公开索引，而不是默认首页。MCP `feed_preview` 的省略值则是默认首页。查询 `feed=wiki&format=short` 合法，但默认配置下结果为空。
+
+分页游标绑定筛选条件与信息流配置版本。切换流、格式、分类或修改流配置后，丢弃旧游标，从第一页开始；否则返回 `INVALID_CURSOR`。列表、随机、taxonomy 共用过滤条件。搜索包括原话、背景、来源摘录。
+
+`GET /api/admin/feeds` 返回 `{feeds, defaultFeed, version}`。`PUT` 完整替换此对象，必须使用读到的 version，冲突返回 409。流定义为 `{id,label,description,formats,enabled}`，最多 12 个；ID 为 1–32 位小写字母、数字、`_`、`-`，首位为字母或数字；名称最多 30 字符；至少允许一种格式；默认流必须启用。设置存入 SQLite，读取端随即生效，已经打开的访客页面刷新后获取新导航。
+
+`SiteConfig` 新增 `feeds` 与 `defaultFeed`，公开 `feeds` 只含启用的定义。完整短内容字段、示例与分发语义见 [UPGRADE_V2.md](../UPGRADE_V2.md) 和 [IMPORTING.md](IMPORTING.md)。
+
 ## 1. 路径总览
 
 「会话 + CSRF」表示同时携带管理员 cookie 和 `X-CSRF-Token`。
@@ -23,7 +35,9 @@ API 固定挂载在 `/api`。下面使用本机开发入口 `http://localhost:51
 | `POST /api/admin/logout` | 会话 + CSRF | 204，无响应体，清除当前会话 |
 | `POST /api/admin/password` | 会话 + CSRF | 204，无响应体，撤销该账号全部会话 |
 | `GET /api/admin/stats` | 会话 | 200，数量及最近条目 |
-| `GET /api/admin/settings` | 会话 | 200，站点公开配置与上传限制 |
+| `GET /api/admin/settings` | 会话 | 200，站点配置、上传限制、MCP 开关与地址（不含凭据） |
+| `GET /api/admin/feeds` | 会话 | 200，`FeedSettings` |
+| `PUT /api/admin/feeds` | 会话 + CSRF | 200，带新版本号的 `FeedSettings` |
 | `GET /api/admin/artifacts` | 会话 | 200，管理端页码分页 |
 | `POST /api/admin/artifacts` | 会话 + CSRF | 201，创建后的 `Artifact` |
 | `GET /api/admin/artifacts/:idOrSlug` | 会话 | 200，任意状态的 `Artifact` |
@@ -38,7 +52,7 @@ API 固定挂载在 `/api`。下面使用本机开发入口 `http://localhost:51
 | `GET /api/admin/export` | 会话 | 200，JSON 下载 |
 | `GET /api/admin/audit` | 会话 | 200，最近 100 条审计记录数组 |
 
-管理写入接口中的 `:id` 请使用读取响应返回的条目 UUID。公开详情及管理员详情可以使用 UUID 或 URL 编码后的 slug。没有普通用户注册、API key、Bearer token、PATCH、物理删除条目或删除媒体的接口。
+管理写入接口中的 `:id` 请使用读取响应返回的条目 UUID。公开详情及管理员详情可以使用 UUID 或 URL 编码后的 slug。REST 管理接口使用会话与 CSRF，不接受 MCP Bearer Token。没有普通用户注册、REST PATCH、物理删除条目或删除媒体的接口；局部更新可使用 MCP 的 artifact_patch。
 
 ## 2. 会话、CSRF 与 curl 登录
 
@@ -48,7 +62,8 @@ API 固定挂载在 `/api`。下面使用本机开发入口 `http://localhost:51
 
 ### MCP（条目管理）
 
-`POST /mcp` 是无状态 Streamable HTTP MCP 端点。每个请求必须带上 `Authorization: Bearer <管理员当前密码>`；Token 会实时校验管理员密码，所以后台修改密码后，旧 Token 会立即失效。端点提供 `artifact_list`、`artifact_get`、`artifact_create`、`artifact_update`、`artifact_delete`、`artifact_revisions` 与 `artifact_restore`。更新、归档和恢复均要求当前 `version`，避免覆盖其他编辑；`artifact_delete` 归档条目而不物理删除。MCP 不支持媒体上传，先通过后台上传媒体后再在条目中引用媒体 ID。
+`POST /mcp` 使用独立的 `MCP_TOKEN` 或只读管理凭据 `MCP_READ_TOKEN`。不需要管理员 cookie 或 CSRF。默认不再接受管理员密码作为 Bearer；临时兼容须显式启用 `MCP_ALLOW_ADMIN_PASSWORD=true`。提供 15 个工具，包括长文/切片 CRUD、版本恢复、信息流配置、批量导入和媒体上传；协议、字段和示例见 [MCP.md](MCP.md)。
+
 
 浏览器跨域调用必须使用 `credentials: 'include'`，来源须在允许列表中。发送了 `Origin` 的脚本同样遵守允许来源检查；没有 `Origin` 的命令行请求可正常使用 cookie 与 CSRF 认证。
 
@@ -131,13 +146,16 @@ $OutputEncoding = $wikiPreviousEncoding
 {"title":"[示例] 校园条目","content":"这里是待核对的 Markdown 正文。"}
 ```
 
-创建请求缺省 `status` 为 `draft`。空 slug 从标题生成，空摘要从正文生成。输入采用严格字段校验；单条 API 不接受导入专用别名、字符串形式的标签数组或正文数组，不自动拼接 BBS 原帖 URL。
+创建请求缺省 `status` 为 `draft`。空 slug 从标题生成，长文空摘要从正文生成；切片摘要从结构化短内容派生。输入采用严格字段校验；单条 API 不接受导入专用别名、字符串形式的标签数组或正文数组，不自动拼接 BBS 原帖 URL。
 
 完整 `Artifact` 响应示例：
 
 ```json
 {
   "id": "11111111-1111-4111-8111-111111111111",
+  "format": "long",
+  "feedIds": ["main", "wiki"],
+  "short": null,
   "title": "[示例] 校园条目",
   "slug": "example-campus-entry",
   "summary": "这里是待核对的 Markdown 正文。",
@@ -500,7 +518,7 @@ curl.exe --silent --show-error --fail-with-body --request POST --cookie $wikiCoo
 
 ```text
 {
-  schemaVersion: 1,
+  schemaVersion: 2,
   exportedAt: string,
   artifacts: ArtifactInput[]
 }

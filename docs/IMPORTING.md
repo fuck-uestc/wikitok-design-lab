@@ -42,14 +42,14 @@
 
 ## 3. 标准字段
 
-以下为创建、替换更新与导入共用的字段。除标题、正文外均可省略。字符串会去掉首尾空白，`null` 一般不是空值；空字符串使用 `""`，空数组使用 `[]`。
+以下为创建、替换更新与导入共用的字段。长文要求标题和正文；切片要求标题及对应 short 内容，不要求 Markdown 正文。其余字段按下表和 v2 补充说明处理。字符串会去掉首尾空白，`null` 一般不是空值；空字符串使用 `""`，空数组使用 `[]`。
 
 | 字段 | 类型、限制 | 省略或为空时的行为 |
 | --- | --- | --- |
 | `title` | 字符串，1–200 | 必填；Markdown 可在未声明标题时从正文标题或文件名推断 |
 | `slug` | 字符串，最多 120；首字符须为文字或数字，后续允许文字、数字、`_`、`-` | 省略或 `""` 时由标题生成；建议提供稳定值 |
-| `summary` | 字符串，最多 600 | 省略或 `""` 时从正文提取最多 220 个字符的摘要 |
-| `content` | Markdown 字符串，1–200000 | 必填；Markdown 文件正文直接作为此字段 |
+| `summary` | 字符串，最多 600 | 长文空值时派生；切片始终由 short 内容派生，不能单独编辑 |
+| `content` | Markdown 字符串，最多 200000 | 长文必填；Markdown 文件正文直接作为此字段 |
 | `kind` | `article` / `guide` / `person` / `event` / `glossary` | 省略为 `article`，不能用 `""` 代替 |
 | `category` | 字符串，最多 60 | `""`；新分类随条目保存自动出现 |
 | `tags` | 字符串数组，最多 30 项；每项 1–60 | `[]`；去掉完全重复的项 |
@@ -85,7 +85,7 @@
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "artifacts": [
     {
       "title": "[示例] 新生资料整理索引",
@@ -312,7 +312,7 @@ status: draft
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "exportedAt": "2026-09-06T00:00:00.000Z",
   "artifacts": []
 }
@@ -338,3 +338,48 @@ status: draft
 | 封面/附件在后台能看，前台 404 | 核对文件是否被已发布条目的封面或附件关联 |
 | 更新后标签、封面或状态变化 | `update` 使用完整替换与默认值；恢复合适的历史版本，再重新整理完整输入 |
 | 导入大批数据超限 | 按记录数、文件大小和代理请求体限制拆分；保留稳定 externalId，先预览再提交 |
+
+
+## 11. 长文与切片的结构化导入（v2）
+
+推荐 JSON；下载的 artifacts.json 已包含两个长文与三个虚构切片草稿。CSV/Markdown 旧模板继续有效，省略 format 按长文处理。不要把虚构示例发布成真实事件。
+
+| 字段 | 类型与限制 | 语义 |
+| --- | --- | --- |
+| `format` | long / short | 缺省 long，与原 kind 分类独立 |
+| `feedIds` | 最多 12 个流 ID | 缺省 long→main/wiki，short→main/slices；显式 [] 不投放任何流 |
+| `short.layout` | quote / image / comparison / note | 原话 / 原图 / 对照 / 行为概述 |
+| `short.text` | 字符串，最多 1600 | quote/note 必填 |
+| `short.context` | 最多 600 | 必要背景；禁止用它伪装成原话 |
+| `short.attribution` | 最多 120 | 发言主体或材料署名 |
+| `short.verification` | unverified / source-checked / disputed / corrected | 编辑核对状态，不代表系统判定真伪 |
+| `short.sources` | 最多 8 项 | 每项 label（必填，最多200）、url、mediaId、excerpt（最多3000）、date（最多40） |
+| `short.comparison` | 最多 2 项，对照卡恰好 2 项 | 每项 label（最多80）、text（必填，最多800）、sourceIndex（0起或null） |
+| `short.correction` | 最多 2000 | corrected 状态必填 |
+
+image 卡必须使用 coverMediaId 或 coverUrl。source-checked 至少需要来源链接或已上传文件；对照卡的每一侧还须指向带链接/文件的 sources 项。来源 mediaId 自动建立附件关联，文件仍必须真实存在。附件去重后总数最多20。
+
+切换为 long 时 short 会清空；通过完整 PUT/import update 切换格式时请保留需要的字段。导入 unknown 字段被拒绝，不会把未经约定的 JSON 默默丢弃。
+
+```json
+{
+  "schemaVersion": 2,
+  "artifacts": [{
+    "title": "[虚构示例] 自愿参加",
+    "format": "short",
+    "feedIds": ["main", "slices"],
+    "status": "draft",
+    "short": {
+      "layout": "quote",
+      "text": "活动完全自愿，不参加的同学请说明理由。",
+      "context": "用于检验版式，不是真实通知。",
+      "verification": "unverified",
+      "sources": []
+    }
+  }]
+}
+```
+
+CSV 的 short 单元格填写完整 JSON，并按 CSV 规则转义内部引号；feedIds 推荐 JSON 数组（例如 `[]`），也兼容分隔字符串。导入别名支持 `feed_ids`→feedIds、`short_content`→short。Markdown front matter 可以写结构化 short 对象，正文可留空用于短内容；复杂对照建议 JSON。
+
+**update 是完整替换**，遗漏 feedIds 会重新应用默认投放，而不是保留旧关系。仅改变投放时使用 MCP artifact_patch，或先读出完整内容再改动。内容导出现在写 schemaVersion=2，但版本号本身不触发另一套迁移器；旧记录按字段兼容规则解析。

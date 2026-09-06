@@ -47,4 +47,10 @@ CREATE TABLE audit_logs (
   id INTEGER PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, target_id TEXT NOT NULL DEFAULT '',
   detail TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL
 );
+` }, { version: 2, sql: `
+ALTER TABLE artifacts ADD COLUMN format TEXT NOT NULL DEFAULT 'long' CHECK(format IN ('long','short'));
+ALTER TABLE artifacts ADD COLUMN feed_ids TEXT NOT NULL DEFAULT '["main","wiki"]';
+ALTER TABLE artifacts ADD COLUMN short_json TEXT NOT NULL DEFAULT 'null';
+CREATE INDEX artifacts_format_feed ON artifacts(status, format, published_at DESC, id DESC);
+CREATE TABLE site_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1);
 ` }];

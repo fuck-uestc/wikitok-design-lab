@@ -18,7 +18,7 @@ function normalize(raw: unknown, defaultStatus: 'draft' | 'published', store: St
     content: ['contentMarkdown', 'content_markdown', 'body'], summary: ['excerpt', 'extract'],
     author: ['author_name', 'username'], category: ['board', 'forum_name'],
     sourceUrl: ['source_url', 'url'], sourceTitle: ['source_title'], sourceThreadId: ['source_thread_id', 'thread_id', 'tid'], externalId: ['external_id'],
-    coverUrl: ['cover_url'], coverMediaId: ['cover_media_id'], coverAlt: ['cover_alt'], coverCredit: ['cover_credit'], eventDate: ['event_date'], attachmentIds: ['attachment_ids']
+    coverUrl: ['cover_url'], coverMediaId: ['cover_media_id'], coverAlt: ['cover_alt'], coverCredit: ['cover_credit'], eventDate: ['event_date'], attachmentIds: ['attachment_ids'], feedIds: ['feed_ids'], short: ['shortContent', 'short_content']
   };
   for (const [canonical, names] of Object.entries(aliases)) {
     for (const name of names) { if (record[canonical] === undefined && record[name] !== undefined) record[canonical] = record[name]; delete record[name]; }
@@ -27,7 +27,10 @@ function normalize(raw: unknown, defaultStatus: 'draft' | 'published', store: St
   if (record.sourceThreadId !== undefined) record.sourceThreadId = String(record.sourceThreadId);
   if (record.externalId !== undefined) record.externalId = String(record.externalId);
   if (record.eventDate instanceof Date) record.eventDate = record.eventDate.toISOString().slice(0, 10);
-  for (const key of ['tags', 'aliases', 'attachmentIds']) if (record[key] !== undefined) record[key] = splitTerms(record[key]);
+  for (const key of ['tags', 'aliases', 'attachmentIds', 'feedIds']) if (record[key] !== undefined) record[key] = splitTerms(record[key]);
+  if (typeof record.short === 'string' && record.short.trim()) record.short = JSON.parse(record.short);
+  if (record.short === '') delete record.short;
+  if (record.format === '') delete record.format;
   if (!record.sourceUrl && record.sourceThreadId && store.config.threadUrlTemplate) record.sourceUrl = store.config.threadUrlTemplate.replaceAll('{id}', encodeURIComponent(String(record.sourceThreadId)));
   if (!record.status) record.status = defaultStatus;
   const parsed = artifactSchema.safeParse(record);

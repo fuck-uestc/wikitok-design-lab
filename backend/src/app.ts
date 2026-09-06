@@ -10,10 +10,11 @@ import type { Config } from './config.js';
 import { Store, toInput } from './store.js';
 import { bootstrapAdmin, createAuth } from './auth.js';
 import { ApiError } from './errors.js';
+import { feedIdSchema, formatSchema } from '../../shared/feeds.js';
 import { artifactSchema } from '../../shared/schema.js';
 import { commitPreview, createPreview } from './imports.js';
 import { uploadMedia } from './media.js';
-import { handleMcpRequest } from './mcp.js';
+import { handleMcpRequest, supportedProtocols } from './mcp.js';
 
 export function runtimeScript(site: Config['site']) {
   return `window.__WIKI_CONFIG__=${JSON.stringify(site).replace(/</g, '\\u003c')};`;
@@ -46,18 +47,18 @@ export function createApp(config: Config) {
     store.db.prepare('SELECT 1').get();
     res.json({ status: 'ok' });
   });
-  app.get('/runtime-config.js', (_req, res) => { res.set('Cache-Control', 'no-store').type('application/javascript').send(runtimeScript(config.site)); });
-  app.get('/api/config', (_req, res) => res.json(config.site));
-  app.get('/api/taxonomy', (_req, res) => res.json(store.taxonomy()));
+  app.get('/runtime-config.js', (_req, res) => { res.set('Cache-Control', 'no-store').type('application/javascript').send(runtimeScript(store.publicSite())); });
+  app.get('/api/config', (_req, res) => res.json(store.publicSite()));
+  app.get('/api/taxonomy', (req, res) => res.json(store.taxonomy(z.object({ feed: feedIdSchema.optional(), format: formatSchema.optional() }).parse(req.query))));
   app.get('/api/artifacts', (req, res) => {
-    const query = z.object({ q: z.string().trim().max(100).optional(), category: z.string().max(60).optional(), tag: z.string().max(60).optional(), cursor: z.string().max(500).optional(), ids: z.string().max(6500).optional(), limit: z.coerce.number().int().min(1).max(100).default(12) }).parse(req.query);
+    const query = z.object({ feed: feedIdSchema.optional(), format: formatSchema.optional(), q: z.string().trim().max(100).optional(), category: z.string().max(60).optional(), tag: z.string().max(60).optional(), cursor: z.string().max(500).optional(), ids: z.string().max(6500).optional(), limit: z.coerce.number().int().min(1).max(100).default(12) }).parse(req.query);
     const ids = query.ids === undefined ? undefined : query.ids.split(',').filter(Boolean);
     if (ids && (ids.length > 100 || ids.some(id => id.length > 64))) throw new ApiError(400, 'INVALID_IDS', '每次最多查询 100 个条目 ID');
     res.json(store.list({ ...query, ids }));
   });
   app.get('/api/artifacts/random', (req, res) => {
-    const { category } = z.object({ category: z.string().max(60).optional() }).parse(req.query);
-    const artifact = store.random(category);
+    const query = z.object({ feed: feedIdSchema.optional(), format: formatSchema.optional(), category: z.string().max(60).optional() }).parse(req.query);
+    const artifact = store.random(query);
     if (!artifact) throw new ApiError(404, 'NOT_FOUND', '暂时没有已发布的条目');
     res.json(artifact);
   });
@@ -78,12 +79,17 @@ export function createApp(config: Config) {
   });
   const loginLimiter = rateLimit({ windowMs: 15 * 60_000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, skipSuccessfulRequests: true, message: { error: { code: 'LOGIN_LIMITED', message: '登录尝试过多，请在 15 分钟后重试' } } });
   const mcpLimiter = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: { code: 'MCP_RATE_LIMITED', message: 'MCP 请求过于频繁，请稍后再试' } } });
+  app.use('/mcp', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+  app.get('/mcp', (_req, res) => res.set('Allow', 'POST').status(405).end());
+  app.delete('/mcp', (_req, res) => res.set('Allow', 'POST').status(405).end());
   app.post('/mcp', mcpLimiter, async (req, res, next) => {
     try {
       const authorization = req.header('authorization') || '';
       const match = /^Bearer\s+(.+)$/i.exec(authorization);
       const actor = match && await auth.mcpActor(match[1]);
       if (!actor) { res.set('WWW-Authenticate', 'Bearer').status(401).json({ error: { code: 'MCP_UNAUTHENTICATED', message: '需要有效的 Bearer Token' } }); return; }
+      const protocol = req.header('MCP-Protocol-Version');
+      if (protocol && !supportedProtocols.includes(protocol)) { res.status(400).json({ error: { code: 'UNSUPPORTED_PROTOCOL', message: 'Supported: 2025-03-26, 2025-06-18' } }); return; }
       await handleMcpRequest(req, res, store, actor);
     } catch (error) { next(error); }
   });
@@ -100,9 +106,11 @@ export function createApp(config: Config) {
     res.status(204).end();
   });
   app.get('/api/admin/stats', (_req, res) => res.json(store.stats()));
-  app.get('/api/admin/settings', (_req, res) => res.json({ site: config.site, limits: { uploadMb: config.uploadMb, importMb: config.importMb, importMaxRecords: config.importMax, maxFiles: 20 } }));
+  app.get('/api/admin/feeds', (_req, res) => res.json(store.feedSettings()));
+  app.put('/api/admin/feeds', (req, res) => res.json(store.saveFeedSettings(req.body, req.admin!.username)));
+  app.get('/api/admin/settings', (_req, res) => res.json({ site: store.publicSite(), mcp: { endpoint: new URL('/mcp', config.site.siteUrl).href, writeEnabled: !!config.mcpToken || config.mcpAllowAdminPassword, readEnabled: !!config.mcpReadToken, legacyPasswordEnabled: config.mcpAllowAdminPassword, protocols: supportedProtocols }, limits: { uploadMb: config.uploadMb, importMb: config.importMb, importMaxRecords: config.importMax, maxFiles: 20 } }));
   app.get('/api/admin/artifacts', (req, res) => {
-    const query = z.object({ q: z.string().trim().max(100).optional(), status: z.enum(['draft', 'published', 'archived', '']).optional(), page: z.coerce.number().int().min(1).max(100000).default(1), limit: z.coerce.number().int().min(1).max(100).default(20) }).parse(req.query);
+    const query = z.object({ feed: feedIdSchema.optional(), format: formatSchema.optional(), q: z.string().trim().max(100).optional(), status: z.enum(['draft', 'published', 'archived', '']).optional(), page: z.coerce.number().int().min(1).max(100000).default(1), limit: z.coerce.number().int().min(1).max(100).default(20) }).parse(req.query);
     res.json(store.adminList(query));
   });
   app.post('/api/admin/artifacts', (req, res) => res.status(201).json(store.save(artifactSchema.parse(req.body), req.admin!.username)));
@@ -157,7 +165,7 @@ export function createApp(config: Config) {
   app.post('/api/admin/imports/:id/commit', (req, res) => res.json(commitPreview(store, String(req.params.id), req.admin!.id, req.admin!.username)));
   app.get('/api/admin/export', (_req, res) => {
     const artifacts = store.db.prepare('SELECT * FROM artifacts ORDER BY created_at').all().map(row => toInput(store.hydrate(row as Record<string, string | number | null>)));
-    res.attachment(`campus-wiki-${new Date().toISOString().slice(0, 10)}.json`).json({ schemaVersion: 1, exportedAt: new Date().toISOString(), artifacts });
+    res.attachment(`campus-wiki-${new Date().toISOString().slice(0, 10)}.json`).json({ schemaVersion: 2, exportedAt: new Date().toISOString(), artifacts });
   });
   app.get('/api/admin/audit', (_req, res) => res.json(store.db.prepare('SELECT actor,action,target_id AS targetId,detail,created_at AS createdAt FROM audit_logs ORDER BY id DESC LIMIT 100').all()));
   app.use('/api', (_req, _res, next) => next(new ApiError(404, 'ENDPOINT_NOT_FOUND', 'API 路径不存在')));

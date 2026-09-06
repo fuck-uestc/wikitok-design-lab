@@ -65,10 +65,19 @@ export function createAuth(store: Store, config: Config) {
     res.cookie(cookieName, token, { ...cookieOptions, maxAge: config.sessionHours * 3600_000 });
     return { username, csrfToken, expiresAt };
   }
-  async function mcpActor(token: string): Promise<string | undefined> {
+  async function mcpActor(token: string): Promise<{ actor: string; readOnly: boolean } | undefined> {
+    if (token.length > 256) return;
+    const matches = (expected: string) => !!expected && timingSafeEqual(Buffer.from(hashToken(token)), Buffer.from(hashToken(expected)));
+    if (matches(config.mcpToken)) return { actor: 'mcp:write', readOnly: false };
+    if (matches(config.mcpReadToken)) return { actor: 'mcp:read', readOnly: true };
+    // Existing deployments predate dedicated MCP tokens and deliberately use
+    // the current admin password as their Bearer token. Keep that contract
+    // when neither dedicated token is configured, without weakening an
+    // explicitly configured token-based deployment.
+    if (!config.mcpAllowAdminPassword && (config.mcpToken || config.mcpReadToken)) return;
     const row = store.db.prepare('SELECT username,password_hash FROM admins ORDER BY created_at LIMIT 1').get() as { username?: string; password_hash?: string } | undefined;
     const valid = await verifyPassword(token, row?.password_hash || dummyHash);
-    return row && valid ? String(row.username) : undefined;
+    return row && valid ? { actor: `${row.username}:mcp-legacy`, readOnly: false } : undefined;
   }
   function logout(user: AuthUser, res: Response) {
     store.db.prepare('DELETE FROM sessions WHERE token_hash=?').run(user.tokenHash);

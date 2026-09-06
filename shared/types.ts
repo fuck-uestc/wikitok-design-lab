@@ -1,7 +1,19 @@
 export type Theme = 'margin' | 'drift';
+export type ContentFormat = 'long' | 'short';
+export type ShortLayout = 'quote' | 'image' | 'comparison' | 'note';
+export interface SourceMaterial { label: string; url: string; mediaId: string; excerpt: string; date: string }
+export interface ShortContent {
+  layout: ShortLayout; text: string; context: string; attribution: string;
+  verification: 'unverified' | 'source-checked' | 'disputed' | 'corrected';
+  sources: SourceMaterial[]; comparison: { label: string; text: string; sourceIndex: number | null }[]; correction: string;
+}
+export interface FeedDefinition { id: string; label: string; description: string; formats: ContentFormat[]; enabled: boolean }
+export interface FeedSettings { feeds: FeedDefinition[]; defaultFeed: string; version: number }
 export type ArtifactStatus = 'draft' | 'published' | 'archived';
 export type ArtifactKind = 'article' | 'guide' | 'person' | 'event' | 'glossary';
 export interface SiteConfig {
+  feeds: FeedDefinition[];
+  defaultFeed: string;
   siteName: string;
   shortName: string;
   description: string;
@@ -21,6 +33,9 @@ export interface Media {
   createdAt: string;
 }
 export interface ArtifactInput {
+  format: ContentFormat;
+  feedIds: string[];
+  short: ShortContent | null;
   title: string;
   slug: string;
   summary: string;

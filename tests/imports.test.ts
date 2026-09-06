@@ -82,5 +82,5 @@ test('every bundled import template is accepted by the production import parser'
   const f = await fixture(t);
   const files = ['artifacts.json', 'artifacts.csv', 'artifact.md'].map(name => ({ name, content: readFileSync(`frontend/public/templates/${name}`, 'utf8') }));
   const preview = (await f.admin.request('/api/admin/imports/preview', { method: 'POST', body: filesBody(files) })).data;
-  assert.equal(preview.counts.error, 0, JSON.stringify(preview.rows)); assert.equal(preview.counts.create, 4);
+  assert.equal(preview.counts.error, 0, JSON.stringify(preview.rows)); assert.equal(preview.counts.create, 7);
 });

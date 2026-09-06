@@ -1,0 +1,5 @@
+{
+  "extends":"./backend/tsconfig.json",
+  "compilerOptions":{"rootDir":".","outDir":".test-build","sourceMap":false,"lib":["ES2023","DOM","DOM.Iterable"]},
+  "include":["backend/src","shared","tests"]
+}

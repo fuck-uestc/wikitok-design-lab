@@ -1,7 +1,9 @@
+import { defaultFeeds } from '../../shared/feeds';
 import type { ArtifactSummary, SiteConfig } from '../../shared/types';
 
 declare global { interface Window { __WIKI_CONFIG__?: SiteConfig } }
 export const initialConfig: SiteConfig = window.__WIKI_CONFIG__ || {
+  feeds: defaultFeeds, defaultFeed: 'main',
   siteName: '校园 BBS Wiki', shortName: '校园志', description: '把校园里的故事、经验和共同记忆，慢慢收藏。',
   tagline: '校园有回声，记忆有来处。', defaultTheme: 'margin', siteUrl: window.location.origin, apiBaseUrl: '/api', bbsBaseUrl: '', contactEmail: ''
 };
