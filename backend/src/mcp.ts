@@ -10,10 +10,21 @@ type ToolResult = { content: { type: 'text'; text: string }[]; structuredContent
 
 const requestSchema = z.object({ jsonrpc: z.literal('2.0'), id: z.union([z.string(), z.number(), z.null()]).optional(), method: z.string().min(1).max(100), params: z.unknown().optional() }).passthrough();
 const artifactInputDescription = 'ArtifactInput object. title and content are required. Optional fields: slug, summary, kind (article|guide|person|event|glossary), category, tags, aliases, author, sourceUrl, sourceTitle, sourceThreadId, externalId, coverUrl, coverMediaId, coverAlt, coverCredit, eventDate (YYYY-MM-DD), status (draft|published|archived), attachmentIds.';
+const artifactOutputSchema = {
+  type: 'object',
+  description: 'Complete saved artifact. Use id and version for subsequent updates, archive or restore operations.',
+  properties: {
+    id: { type: 'string' }, version: { type: 'integer', minimum: 1 }, title: { type: 'string' }, slug: { type: 'string' }, summary: { type: 'string' }, content: { type: 'string' },
+    kind: { type: 'string', enum: ['article', 'guide', 'person', 'event', 'glossary'] }, status: { type: 'string', enum: ['draft', 'published', 'archived'] },
+    createdAt: { type: 'string' }, updatedAt: { type: 'string' }, publishedAt: { type: ['string', 'null'] }, tags: { type: 'array', items: { type: 'string' } }, aliases: { type: 'array', items: { type: 'string' } }, attachmentIds: { type: 'array', items: { type: 'string' } }, attachments: { type: 'array' }
+  },
+  required: ['id', 'version', 'title', 'slug', 'summary', 'content', 'kind', 'status', 'createdAt', 'updatedAt', 'publishedAt', 'tags', 'aliases', 'attachmentIds', 'attachments'],
+  additionalProperties: true
+} as const;
 const tools = [
   { name: 'artifact_list', description: 'List all artifacts, including drafts and archived entries.', inputSchema: { type: 'object', properties: { q: { type: 'string' }, status: { type: 'string', enum: ['all', 'draft', 'published', 'archived'] }, page: { type: 'integer', minimum: 1 }, limit: { type: 'integer', minimum: 1, maximum: 100 } }, additionalProperties: false } },
   { name: 'artifact_get', description: 'Get full artifact details by UUID or slug, including Markdown body, media and version.', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false } },
-  { name: 'artifact_create', description: 'Create an artifact. The result includes its id and version for later updates.', inputSchema: { type: 'object', properties: { artifact: { type: 'object', description: artifactInputDescription } }, required: ['artifact'], additionalProperties: false } },
+  { name: 'artifact_create', description: 'Create an artifact. The result includes its id and version for later updates.', inputSchema: { type: 'object', properties: { artifact: { type: 'object', description: artifactInputDescription } }, required: ['artifact'], additionalProperties: false }, outputSchema: artifactOutputSchema },
   { name: 'artifact_update', description: 'Replace an artifact using optimistic concurrency. Read it first and provide its current version.', inputSchema: { type: 'object', properties: { id: { type: 'string' }, version: { type: 'integer', minimum: 1 }, artifact: { type: 'object', description: artifactInputDescription } }, required: ['id', 'version', 'artifact'], additionalProperties: false } },
   { name: 'artifact_delete', description: 'Archive an artifact rather than physically deleting it. Read it first and provide its current version.', inputSchema: { type: 'object', properties: { id: { type: 'string' }, version: { type: 'integer', minimum: 1 } }, required: ['id', 'version'], additionalProperties: false } },
   { name: 'artifact_revisions', description: 'List up to 100 stored revisions for an artifact.', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false } },
