@@ -46,6 +46,10 @@ API 固定挂载在 `/api`。下面使用本机开发入口 `http://localhost:51
 
 除登录外，`/api/admin` 所有接口都需要有效会话。`POST`、`PUT`、`DELETE` 等写入操作还必须携带会话对应的 `X-CSRF-Token`，包含登出、媒体上传、预览和提交导入。GET 请求无需 CSRF。修改密码后该账号全部旧会话失效，须重新登录并取得新 token。
 
+### MCP（条目管理）
+
+`POST /mcp` 是无状态 Streamable HTTP MCP 端点。每个请求必须带上 `Authorization: Bearer <管理员当前密码>`；Token 会实时校验管理员密码，所以后台修改密码后，旧 Token 会立即失效。端点提供 `artifact_list`、`artifact_get`、`artifact_create`、`artifact_update`、`artifact_delete`、`artifact_revisions` 与 `artifact_restore`。更新、归档和恢复均要求当前 `version`，避免覆盖其他编辑；`artifact_delete` 归档条目而不物理删除。MCP 不支持媒体上传，先通过后台上传媒体后再在条目中引用媒体 ID。
+
 浏览器跨域调用必须使用 `credentials: 'include'`，来源须在允许列表中。发送了 `Origin` 的脚本同样遵守允许来源检查；没有 `Origin` 的命令行请求可正常使用 cookie 与 CSRF 认证。
 
 ### PowerShell + curl.exe

@@ -13,6 +13,7 @@ import { ApiError } from './errors.js';
 import { artifactSchema } from '../../shared/schema.js';
 import { commitPreview, createPreview } from './imports.js';
 import { uploadMedia } from './media.js';
+import { handleMcpRequest } from './mcp.js';
 
 export function runtimeScript(site: Config['site']) {
   return `window.__WIKI_CONFIG__=${JSON.stringify(site).replace(/</g, '\\u003c')};`;
@@ -76,6 +77,16 @@ export function createApp(config: Config) {
     res.sendFile(join(config.uploadDir, filename), { cacheControl: false }, error => { if (error) next(new ApiError(404, 'NOT_FOUND', '文件已丢失，请联系管理员')); });
   });
   const loginLimiter = rateLimit({ windowMs: 15 * 60_000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, skipSuccessfulRequests: true, message: { error: { code: 'LOGIN_LIMITED', message: '登录尝试过多，请在 15 分钟后重试' } } });
+  const mcpLimiter = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: { code: 'MCP_RATE_LIMITED', message: 'MCP 请求过于频繁，请稍后再试' } } });
+  app.post('/mcp', mcpLimiter, async (req, res, next) => {
+    try {
+      const authorization = req.header('authorization') || '';
+      const match = /^Bearer\s+(.+)$/i.exec(authorization);
+      const actor = match && await auth.mcpActor(match[1]);
+      if (!actor) { res.set('WWW-Authenticate', 'Bearer').status(401).json({ error: { code: 'MCP_UNAUTHENTICATED', message: '需要有效的 Bearer Token' } }); return; }
+      await handleMcpRequest(req, res, store, actor);
+    } catch (error) { next(error); }
+  });
   app.post('/api/admin/login', loginLimiter, async (req, res) => {
     const input = z.object({ username: z.string().trim().min(1).max(100), password: z.string().min(1).max(256) }).strict().parse(req.body);
     res.json(await auth.login(input.username, input.password, res));

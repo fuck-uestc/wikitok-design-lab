@@ -65,6 +65,11 @@ export function createAuth(store: Store, config: Config) {
     res.cookie(cookieName, token, { ...cookieOptions, maxAge: config.sessionHours * 3600_000 });
     return { username, csrfToken, expiresAt };
   }
+  async function mcpActor(token: string): Promise<string | undefined> {
+    const row = store.db.prepare('SELECT username,password_hash FROM admins ORDER BY created_at LIMIT 1').get() as { username?: string; password_hash?: string } | undefined;
+    const valid = await verifyPassword(token, row?.password_hash || dummyHash);
+    return row && valid ? String(row.username) : undefined;
+  }
   function logout(user: AuthUser, res: Response) {
     store.db.prepare('DELETE FROM sessions WHERE token_hash=?').run(user.tokenHash);
     res.clearCookie(cookieName, cookieOptions);
@@ -81,5 +86,5 @@ export function createAuth(store: Store, config: Config) {
     });
     res.clearCookie(cookieName, cookieOptions);
   }
-  return { session, requireAdmin, login, logout, changePassword };
+  return { session, requireAdmin, login, logout, changePassword, mcpActor };
 }
