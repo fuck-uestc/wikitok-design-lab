@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { Search, Bookmark, ArrowUp, ArrowDown, Shuffle, PanelsTopLeft, Asterisk } from 'lucide-react';
-import type { ArtifactSummary, ContentFormat, Theme } from '../../../shared/types';
+import type { ArtifactSummary, ContentFormat, ImagePresentation, Theme } from '../../../shared/types';
 import { useApp } from '../context';
 import { IconButton } from './UI';
 export interface LayoutProps {
   feed: ReactNode; theme: Theme; active: number; total: number; category: string; categories: string[];
+  imagePresentation: ImagePresentation;
   savedCount: number; current?: ArtifactSummary;
   canNext: boolean; loadingMore: boolean; moreError: string; randomLoading: boolean;
   feedId: string; format: ContentFormat | ''; onFeed: (id: string) => void; onFormat: (format: ContentFormat | '') => void;
@@ -15,7 +16,7 @@ export interface LayoutProps {
 function ReadingLayout(p: LayoutProps) {
   const { config } = useApp();
   const selected = config.feeds.find(f => f.id === p.feedId);
-  return <div className={`reading-shell ${p.theme}`}>
+  return <div className={`reading-shell ${p.theme} ${p.imagePresentation === 'immersive' ? 'immersive-image-stage' : ''}`}>
     <aside className="reading-rail" aria-hidden="true"><Asterisk /><span>{config.tagline}</span><small>ARCHIVE<br />/</small></aside>
     <div className="reading-main">
       <header className="reading-header">

@@ -85,6 +85,60 @@
 .image-immersive .entry-copy { position:relative; z-index:1; max-width:min(620px,55%); }
 .image-immersive .format-badge { color:var(--ink); }
 .image-immersive .entry-actions [aria-pressed=true] { background:#ffffff22; }
+
+/* Immersive covers reuse the old DRIFT composition: one borderless, full-bleed stage. */
+.reading-shell.immersive-image-stage {
+  --paper:#0b0e10; --ink:#edf0e8; --quiet:#adb6aa; --hairline:#ffffff2e;
+  --panel:#ffffff16; --accent:#e2eaa9; --on-accent:#233026;
+  display:block; position:relative; overflow:hidden; background:#0b0e10; color:var(--ink);
+}
+.immersive-image-stage .reading-rail { display:none; }
+.immersive-image-stage .reading-main { position:relative; width:100%; height:100dvh; overflow:hidden; }
+.immersive-image-stage .reading-header {
+  position:absolute; inset:0 0 auto; z-index:12; min-height:110px; padding:0 clamp(24px,3.6vw,58px);
+  border:0; background:linear-gradient(180deg,#0b0e10a8 0%,transparent 100%);
+}
+.immersive-image-stage .reading-subhead {
+  position:absolute; z-index:12; top:104px; left:0; right:0; min-height:52px;
+  padding:6px clamp(24px,3.6vw,58px); border:0; background:transparent;
+}
+.immersive-image-stage .reading-feed { position:absolute; inset:0; width:100%; height:100%; }
+.immersive-image-stage .reading-slide {
+  min-height:100%; padding:156px max(7.1%,28px) 132px; isolation:isolate;
+}
+.immersive-image-stage .reading-slide+.reading-slide::before { display:none; }
+.immersive-image-stage .reading-footer {
+  position:absolute; z-index:12; inset:auto 0 0; min-height:92px;
+  padding:20px clamp(24px,3.6vw,58px) 24px; border:0;
+  background:linear-gradient(0deg,#0b0e10d9 0%,#0b0e1073 58%,transparent 100%);
+}
+.immersive-image-stage .reading-brand,
+.immersive-image-stage .reading-tools button,
+.immersive-image-stage .feed-nav button[aria-current],
+.immersive-image-stage .subhead-tools button,
+.immersive-image-stage .subhead-tools select { color:var(--ink); }
+.immersive-image-stage .reading-brand small,
+.immersive-image-stage .feed-nav button,
+.immersive-image-stage .stream-caption,
+.immersive-image-stage .subhead-tools button,
+.immersive-image-stage .subhead-tools select { color:var(--quiet); }
+.immersive-image-stage .subhead-tools select option { color:#273d31; background:#f5f3ea; }
+.immersive-image-stage .format-filter button[aria-pressed=true] { background:#e3e9c5; color:#253023; }
+.immersive-image-stage .reading-shell .icon-btn:hover,
+.immersive-image-stage .icon-btn:hover { background:#ffffff16; }
+.immersive-image-stage .reading-pagination .icon-btn:last-child { border-color:#ffffff28; }
+.immersive-image-stage .entry-spread.image-immersive .entry-copy { max-width:min(650px,55%); }
+.immersive-image-stage .image-immersive .entry-background-image { opacity:.83; }
+.immersive-image-stage .image-immersive .entry-background::after {
+  background:linear-gradient(90deg,#090d10f7 1%,#0b0e10d6 23%,#0b0e1055 51%,#0b0e1005 80%),linear-gradient(0deg,#0b0e10 0%,#0b0e1088 16%,transparent 47%,#0b0e1066 88%,#0b0e10bb 100%);
+}
+.immersive-image-stage .image-immersive .format-badge { border:0; padding:0; }
+.immersive-image-stage .image-immersive .format-badge::before {
+  content:''; display:inline-block; width:6px; height:6px; margin-right:12px; border-radius:50%;
+  background:#e1e7b5; box-shadow:0 0 0 5px #e1e7b511; vertical-align:middle;
+}
+.immersive-image-stage .image-immersive .entry-summary { -webkit-line-clamp:3; }
+.immersive-image-stage .image-immersive .entry-provenance { border:0; padding-top:0; }
 .slice-entry { width:100%; max-width:1280px; margin:auto; }
 .slice-stage { display:grid; grid-template-columns:minmax(0,1fr); gap:clamp(36px,7vw,118px); align-items:center; }
 .has-evidence .slice-stage { grid-template-columns:minmax(0,1.45fr) minmax(240px,.8fr); }
@@ -253,6 +307,12 @@
   .entry-media img { height:220px; }
   .entry-media figcaption { font-size:8px; padding-top:6px; }
   .entry-copy .entry-kicker { margin-bottom:17px; }
+  .immersive-image-stage .reading-header { min-height:106px; padding:10px 20px 0; }
+  .immersive-image-stage .reading-subhead { top:106px; min-height:54px; padding:7px 20px; }
+  .immersive-image-stage .reading-slide { padding:174px 24px calc(104px + env(safe-area-inset-bottom)); }
+  .immersive-image-stage .reading-footer { min-height:70px; padding:8px 20px max(12px,env(safe-area-inset-bottom)); }
+  .immersive-image-stage .entry-spread.image-immersive .entry-copy { max-width:calc(100% - 44px); }
+  .immersive-image-stage .image-immersive .entry-background::after { background:linear-gradient(0deg,#0b0e10 0%,#0b0e10f5 15%,#0b0e10a3 51%,#0b0e1011 78%,#0b0e1099 100%),linear-gradient(90deg,#0b0e1033,transparent); }
   .short-reader .quote-block>p { font-size:29px; }
   .short-reader .comparison-pair p { font-size:22px; }
   .source-record { padding:19px; }
