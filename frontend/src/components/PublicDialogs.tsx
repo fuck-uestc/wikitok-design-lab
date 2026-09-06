@@ -2,19 +2,22 @@ import { ShortReader } from './ShortReader';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bookmark, Check, Search, ArrowUpRight, FileText, Settings2, Copy } from 'lucide-react';
-import type { Artifact, ArtifactSummary, Page, Theme } from '../../../shared/types';
+import type { Artifact, ArtifactSummary, ImagePresentation, Page, Theme } from '../../../shared/types';
 import { kindLabels } from '../../../shared/types';
 import { api, coverUrl, isAbort, mediaUrl, messageOf } from '../api';
 import { useApp } from '../context';
 import { Dialog, ErrorNotice, ExternalLink, formatDate, IconButton, Loading, Markdown } from './UI';
 import { ArtifactImage } from './ArticleCards';
 
-export function ThemeDialog({ theme, onTheme, onClose }: { theme: Theme; onTheme: (value: Theme) => void; onClose: () => void }) {
+export function ThemeDialog({ theme, imagePresentation, onTheme, onImagePresentation, onClose }: { theme: Theme; imagePresentation: ImagePresentation; onTheme: (value: Theme) => void; onImagePresentation: (value: ImagePresentation) => void; onClose: () => void }) {
   const { config } = useApp();
   return <Dialog title="阅读主题" onClose={onClose} className="theme-dialog"><div className="theme-dialog-body"><p>主题切换不改变当前条目和收藏。支持本地存储时会记住选择。</p><div className="theme-options">
     <button className="theme-option" aria-pressed={theme === 'margin'} onClick={() => onTheme('margin')}><div className="theme-preview preview-margin"><i /><div><b /><b /><span /></div><em>页</em></div><strong>页外 <small>MARGIN</small>{theme === 'margin' && <Check className="ico" />}</strong><p>纸页般的留白，图文并排慢慢读。</p></button>
     <button className="theme-option" aria-pressed={theme === 'drift'} onClick={() => onTheme('drift')}><div className="theme-preview preview-drift"><i /><div><b /><b /><span /></div><em>游</em></div><strong>游离 <small>DRIFT</small>{theme === 'drift' && <Check className="ico" />}</strong><p>一屏一段故事，沉浸在校园记忆里。</p></button>
-  </div><div className="about-site"><strong>{config.siteName}</strong><p>{config.description}</p><p className="shortcut-help">↑ / ↓ 切换条目 · B 收藏 · / 搜索 · Esc 关闭</p><div>{config.bbsBaseUrl && <ExternalLink href={config.bbsBaseUrl}>回到校园 BBS</ExternalLink>}<Link to="/admin"><Settings2 className="ico" />内容管理</Link></div></div></div></Dialog>;
+  </div><section className="image-presentation-settings" aria-labelledby="image-presentation-title"><div className="setting-heading"><strong id="image-presentation-title">图片呈现</strong><small>长文封面</small></div><div className="image-presentation-options">
+    <button className="image-presentation-option" aria-pressed={imagePresentation === 'immersive'} onClick={() => onImagePresentation('immersive')}><span className="image-presentation-preview preview-image-immersive"><i /><b /></span><span><strong>沉浸式图片{imagePresentation === 'immersive' && <Check className="ico" />}</strong><small>图片铺满全文背景，文字浮在画面上。</small></span></button>
+    <button className="image-presentation-option" aria-pressed={imagePresentation === 'standalone'} onClick={() => onImagePresentation('standalone')}><span className="image-presentation-preview preview-image-standalone"><i /><b /></span><span><strong>独立图片{imagePresentation === 'standalone' && <Check className="ico" />}</strong><small>图片与文字并排，完整展示画面。</small></span></button>
+  </div></section><div className="about-site"><strong>{config.siteName}</strong><p>{config.description}</p><p className="shortcut-help">↑ / ↓ 切换条目 · B 收藏 · / 搜索 · Esc 关闭</p><div>{config.bbsBaseUrl && <ExternalLink href={config.bbsBaseUrl}>回到校园 BBS</ExternalLink>}<Link to="/admin"><Settings2 className="ico" />内容管理</Link></div></div></div></Dialog>;
 }
 
 export function LibraryDialog({ mode: initialMode, scope, savedIds, onClose, onRead, onSave }: { mode: 'all' | 'saved' | 'search'; scope: {feed:string;format:string}; savedIds: string[]; onClose: () => void; onRead: (artifact: ArtifactSummary) => void; onSave: (id: string) => void }) {

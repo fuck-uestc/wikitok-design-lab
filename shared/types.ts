@@ -1,4 +1,5 @@
 export type Theme = 'margin' | 'drift';
+export type ImagePresentation = 'immersive' | 'standalone';
 export type ContentFormat = 'long' | 'short';
 export type ShortLayout = 'quote' | 'image' | 'comparison' | 'note';
 export interface SourceMaterial { label: string; url: string; mediaId: string; excerpt: string; date: string }
